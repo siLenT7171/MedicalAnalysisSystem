@@ -1059,6 +1059,18 @@ class MedicalAnalysisSystem:
                     self.current_data = pd.read_excel(filename)
                 else:
                     raise ValueError("Неподдерживаемый формат файла")
+
+                # Автопреобразование распространенных альтернативных колонок
+                if 'Дата' not in self.current_data.columns and 'Дата диагноза' in self.current_data.columns:
+                    self.current_data['Дата'] = self.current_data['Дата диагноза']
+                if 'Заболевание' not in self.current_data.columns and 'Код МКБ-10' in self.current_data.columns:
+                    self.current_data['Заболевание'] = self.current_data['Код МКБ-10']
+                if 'Количество' not in self.current_data.columns:
+                    # Если каждая строка представляет один случай
+                    self.current_data['Количество'] = 1
+                if 'ID' not in self.current_data.columns:
+                    self.current_data.reset_index(inplace=True)
+                    self.current_data.rename(columns={'index': 'ID'}, inplace=True)
                 
                 # Валидация данных
                 is_valid, message = self.validate_data_format(self.current_data)
@@ -1229,10 +1241,16 @@ class MedicalAnalysisSystem:
                     self.region_combo['values'] = regions
                     if self.region_var.get() not in regions:
                         self.region_var.set('Все')
+
                     if hasattr(self, 'forecast_region_combo'):
                         self.forecast_region_combo['values'] = regions
                         if self.forecast_region_var.get() not in regions:
                             self.forecast_region_var.set('Все')
+
+                    if hasattr(self, 'analysis_region_combo'):
+                        self.analysis_region_combo['values'] = regions
+                        if self.analysis_region_var.get() not in regions:
+                            self.analysis_region_var.set('Все')
                 
                 # Обновление списка заболеваний
                 if 'Заболевание' in self.current_data.columns:

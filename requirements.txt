@@ -5,13 +5,7 @@ openpyxl
 pandas
 scipy
 seaborn
-sklearn
-sqlite3
+scikit-learn
 statsmodels
 tabulate
-tempfile
-tkinter
-traceback
-warnings
-webbrowser
 xgboost

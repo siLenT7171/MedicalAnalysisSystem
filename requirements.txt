@@ -3,7 +3,6 @@ matplotlib
 numpy
 openpyxl
 pandas
-platform
 scipy
 seaborn
 sklearn

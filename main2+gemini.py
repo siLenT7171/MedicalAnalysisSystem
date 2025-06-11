@@ -2469,13 +2469,15 @@ class MedicalAnalysisSystem:
             region_filter = getattr(self, 'forecast_region_var', None)
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
-            data['Дата'] = pd.to_datetime(data['Дата'])
-            monthly_data = data.groupby(pd.Grouper(key='Дата', freq='M'))['Количество'].sum()
-            monthly_data = monthly_data[monthly_data > 0]
-            
-            if len(monthly_data) < 24:
+            data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
+            data = data.dropna(subset=['Дата'])
+            monthly_data = data.resample('MS', on='Дата')['Количество'].sum()
+
+            if (monthly_data > 0).sum() < 24:
                 messagebox.showwarning("Предупреждение", "Недостаточно данных для SARIMA (нужно минимум 24 месяца)")
                 return
+
+            monthly_data = monthly_data[monthly_data > 0]
             
             # Проверка стационарности
             def check_stationarity(timeseries):
@@ -2654,22 +2656,21 @@ class MedicalAnalysisSystem:
                 data = data[data['Регион'] == region_filter]
             data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
             data = data.dropna(subset=['Дата'])
-            
+
             if len(data) == 0:
                 messagebox.showerror("Ошибка", "Нет корректных данных")
                 return
-            
-            data['Месяц'] = data['Дата'].dt.month
-            data['Год'] = data['Дата'].dt.year
-            
-            # Агрегация по месяцам
-            monthly_data = data.groupby(['Год', 'Месяц'])['Количество'].sum().reset_index()
-            monthly_data['Период'] = monthly_data['Год'] * 12 + monthly_data['Месяц']
-            monthly_data = monthly_data.sort_values('Период')
-            
-            if len(monthly_data) < 12:
+
+            monthly_data = data.resample('MS', on='Дата')['Количество'].sum()
+
+            if (monthly_data > 0).sum() < 12:
                 messagebox.showwarning("Предупреждение", "Недостаточно данных для XGBoost прогнозирования")
                 return
+
+            monthly_data = monthly_data.reset_index()
+            monthly_data['Месяц'] = monthly_data['Дата'].dt.month
+            monthly_data['Год'] = monthly_data['Дата'].dt.year
+            monthly_data['Период'] = monthly_data['Год'] * 12 + monthly_data['Месяц']
             
             # Создание расширенных признаков
             monthly_data['Лаг_1'] = monthly_data['Количество'].shift(1)
@@ -2929,13 +2930,15 @@ class MedicalAnalysisSystem:
             region_filter = getattr(self, 'forecast_region_var', None)
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
-            data['Дата'] = pd.to_datetime(data['Дата'])
-            monthly_data = data.groupby(pd.Grouper(key='Дата', freq='M'))['Количество'].sum()
-            monthly_data = monthly_data[monthly_data > 0]
-            
-            if len(monthly_data) < 6:
+            data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
+            data = data.dropna(subset=['Дата'])
+            monthly_data = data.resample('MS', on='Дата')['Количество'].sum()
+
+            if (monthly_data > 0).sum() < 6:
                 messagebox.showwarning("Предупреждение", "Недостаточно данных для линейной регрессии")
                 return
+
+            monthly_data = monthly_data[monthly_data > 0]
             
             # Подготовка признаков (отличается от SARIMA)
             X = np.arange(len(monthly_data)).reshape(-1, 1)

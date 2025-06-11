@@ -446,8 +446,7 @@ class MedicalAnalysisSystem:
         map_types = [
             ("По регионам", "regional"),
             ("Плотность населения", "density"),
-            ("Временная динамика", "temporal"),
-            ("Карта Казахстана", "kazakhstan")
+            ("Временная динамика", "temporal")
         ]
         
         col = 1
@@ -1230,6 +1229,10 @@ class MedicalAnalysisSystem:
                     self.region_combo['values'] = regions
                     if self.region_var.get() not in regions:
                         self.region_var.set('Все')
+                    if hasattr(self, 'forecast_region_combo'):
+                        self.forecast_region_combo['values'] = regions
+                        if self.forecast_region_var.get() not in regions:
+                            self.forecast_region_var.set('Все')
                 
                 # Обновление списка заболеваний
                 if 'Заболевание' in self.current_data.columns:
@@ -1443,8 +1446,6 @@ class MedicalAnalysisSystem:
                 self.build_density_map()
             elif map_type == "temporal":
                 self.build_temporal_map()
-            elif map_type == "kazakhstan":
-                self.build_kz_cartogram()
                 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при построении карты: {str(e)}")

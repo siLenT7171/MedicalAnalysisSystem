@@ -2474,11 +2474,8 @@ class MedicalAnalysisSystem:
             monthly_data = data.resample('MS', on='Дата')['Количество'].sum()
 
             if (monthly_data > 0).sum() < 24:
-                messagebox.showwarning(
-                    "Предупреждение",
-                    "Недостаточно данных для SARIMA (нужно минимум 24 месяца)"
-                )
-                # Продолжаем построение прогноза даже при небольшом числе данных
+                messagebox.showwarning("Предупреждение", "Недостаточно данных для SARIMA (нужно минимум 24 месяца)")
+                return
 
             monthly_data = monthly_data[monthly_data > 0]
             
@@ -2667,11 +2664,8 @@ class MedicalAnalysisSystem:
             monthly_data = data.resample('MS', on='Дата')['Количество'].sum()
 
             if (monthly_data > 0).sum() < 12:
-                messagebox.showwarning(
-                    "Предупреждение",
-                    "Недостаточно данных для XGBoost прогнозирования"
-                )
-                # Продолжаем обучение модели несмотря на предупреждение
+                messagebox.showwarning("Предупреждение", "Недостаточно данных для XGBoost прогнозирования")
+                return
 
             monthly_data = monthly_data.reset_index()
             monthly_data['Месяц'] = monthly_data['Дата'].dt.month
@@ -2698,11 +2692,8 @@ class MedicalAnalysisSystem:
             monthly_data = monthly_data.dropna()
             
             if len(monthly_data) < 8:
-                messagebox.showwarning(
-                    "Предупреждение",
-                    "Недостаточно данных после обработки для XGBoost модели"
-                )
-                # Пытаемся построить модель даже при малом количестве данных
+                messagebox.showwarning("Предупреждение", "Недостаточно данных после обработки для XGBoost модели")
+                return
             
             # Подготовка признаков и целевой переменной
             feature_columns = ['Период', 'Месяц', 'Тренд', 'Лаг_1', 'Лаг_2', 'Лаг_3', 
@@ -2944,11 +2935,8 @@ class MedicalAnalysisSystem:
             monthly_data = data.resample('MS', on='Дата')['Количество'].sum()
 
             if (monthly_data > 0).sum() < 6:
-                messagebox.showwarning(
-                    "Предупреждение",
-                    "Недостаточно данных для линейной регрессии"
-                )
-                # Продолжаем построение модели, несмотря на ограниченные данные
+                messagebox.showwarning("Предупреждение", "Недостаточно данных для линейной регрессии")
+                return
 
             monthly_data = monthly_data[monthly_data > 0]
             
@@ -3092,11 +3080,8 @@ class MedicalAnalysisSystem:
             monthly_data['Период'] = monthly_data['Год'] * 12 + monthly_data['Месяц']
             
             if len(monthly_data) < 12:
-                messagebox.showwarning(
-                    "Предупреждение",
-                    "Недостаточно данных для ML прогнозирования (нужно минимум 12 месяцев)"
-                )
-                # Не прерываем выполнение, пробуем построить модель на доступных данных
+                messagebox.showwarning("Предупреждение", "Недостаточно данных для ML прогнозирования (нужно минимум 12 месяцев)")
+                return
             
             # Создание признаков
             monthly_data['Лаг_1'] = monthly_data['Количество'].shift(1)
@@ -3111,11 +3096,8 @@ class MedicalAnalysisSystem:
             monthly_data = monthly_data.dropna()
             
             if len(monthly_data) < 8:
-                messagebox.showwarning(
-                    "Предупреждение",
-                    "Недостаточно данных после обработки для ML модели"
-                )
-                # Продолжаем выполнение несмотря на предупреждение
+                messagebox.showwarning("Предупреждение", "Недостаточно данных после обработки для ML модели")
+                return
             
             # Подготовка признаков и целевой переменной
             feature_columns = ['Период', 'Месяц', 'Лаг_1', 'Лаг_2', 'Скользящее_среднее', 'Сезон_sin', 'Сезон_cos']
@@ -3714,11 +3696,8 @@ class MedicalAnalysisSystem:
                 monthly_data = monthly_data[monthly_data > 0]
                 
                 if len(monthly_data) < 6:
-                    messagebox.showwarning(
-                        "Предупреждение",
-                        "Недостаточно данных для линейной регрессии"
-                    )
-                    # Продолжаем выполнение даже при небольшом количестве данных
+                    messagebox.showwarning("Предупреждение", "Недостаточно данных для линейной регрессии")
+                    return
                 
                 # Подготовка признаков
                 X = np.arange(len(monthly_data)).reshape(-1, 1)

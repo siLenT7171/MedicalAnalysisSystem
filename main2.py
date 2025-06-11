@@ -387,6 +387,15 @@ class MedicalAnalysisSystem:
             self.date_to.insert(0, "2024-12-31")
             
             self.region_var.set("Все")
+
+            if hasattr(self, 'analysis_region_var'):
+                self.analysis_region_var.set('Все')
+            if hasattr(self, 'analysis_date_from'):
+                self.analysis_date_from.delete(0, tk.END)
+                self.analysis_date_from.insert(0, "2020-01-01")
+            if hasattr(self, 'analysis_date_to'):
+                self.analysis_date_to.delete(0, tk.END)
+                self.analysis_date_to.insert(0, "2024-12-31")
             
             # Показываем все данные
             if self.current_data is not None:
@@ -590,12 +599,30 @@ class MedicalAnalysisSystem:
         self.disease_combo = ttk.Combobox(analysis_panel, textvariable=self.disease_var, width=20)
         self.disease_combo['values'] = ['Все']
         self.disease_combo.grid(row=1, column=1, columnspan=2, padx=5, pady=5, sticky='w')
-        
-        ttk.Button(analysis_panel, text="Выполнить анализ", 
+
+        ttk.Button(analysis_panel, text="Выполнить анализ",
                   command=self.perform_analysis).grid(row=1, column=3, padx=5, pady=5)
-        
-        ttk.Button(analysis_panel, text="Сохранить график", 
+
+        ttk.Button(analysis_panel, text="Сохранить график",
                   command=self.save_analysis_plot).grid(row=1, column=4, padx=5, pady=5)
+
+        # Регион для анализа
+        ttk.Label(analysis_panel, text="Регион:").grid(row=2, column=0, padx=5, pady=5, sticky='w')
+        self.analysis_region_var = tk.StringVar(value="Все")
+        self.analysis_region_combo = ttk.Combobox(analysis_panel, textvariable=self.analysis_region_var, width=20)
+        self.analysis_region_combo['values'] = ['Все']
+        self.analysis_region_combo.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky='w')
+
+        # Период анализа
+        ttk.Label(analysis_panel, text="Период с:").grid(row=2, column=3, padx=5, pady=5, sticky='e')
+        self.analysis_date_from = ttk.Entry(analysis_panel, width=12)
+        self.analysis_date_from.grid(row=2, column=4, padx=2, pady=5, sticky='w')
+        self.analysis_date_from.insert(0, "2020-01-01")
+
+        ttk.Label(analysis_panel, text="по:").grid(row=2, column=5, padx=5, pady=5, sticky='e')
+        self.analysis_date_to = ttk.Entry(analysis_panel, width=12)
+        self.analysis_date_to.grid(row=2, column=6, padx=2, pady=5, sticky='w')
+        self.analysis_date_to.insert(0, "2024-12-31")
         
         # Область для графиков
         self.analysis_plot_frame = ttk.LabelFrame(self.analysis_frame, text="Результаты анализа")
@@ -1132,6 +1159,10 @@ class MedicalAnalysisSystem:
                     self.region_combo['values'] = regions
                     if self.region_var.get() not in regions:
                         self.region_var.set('Все')
+                    if hasattr(self, 'analysis_region_combo'):
+                        self.analysis_region_combo['values'] = regions
+                        if self.analysis_region_var.get() not in regions:
+                            self.analysis_region_var.set('Все')
                 
                 # Обновление списка заболеваний
                 if 'Заболевание' in self.current_data.columns:
@@ -1280,6 +1311,49 @@ class MedicalAnalysisSystem:
             error_text = f"Ошибка при расчете статистики: {str(e)}"
             self.stats_text.insert(1.0, error_text)
             self.stats_text.config(state=tk.DISABLED)
+
+    def get_analysis_filtered_data(self):
+        """Возвращает данные, отфильтрованные для анализа"""
+        if self.current_data is None:
+            return pd.DataFrame()
+
+        data = self.current_data.copy()
+
+        # Фильтр по заболеванию
+        disease_filter = self.disease_var.get()
+        if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
+            data = data[data['Заболевание'] == disease_filter]
+
+        # Фильтр по региону
+        if hasattr(self, 'analysis_region_var') and 'Регион' in data.columns:
+            region_filter = self.analysis_region_var.get()
+            if region_filter and region_filter != 'Все':
+                data = data[data['Регион'] == region_filter]
+
+        # Фильтр по дате
+        if hasattr(self, 'analysis_date_from') and hasattr(self, 'analysis_date_to'):
+            date_from = self.analysis_date_from.get().strip()
+            date_to = self.analysis_date_to.get().strip()
+
+            if date_from:
+                try:
+                    date_from_parsed = pd.to_datetime(date_from)
+                    data = data[pd.to_datetime(data['Дата']) >= date_from_parsed]
+                except Exception:
+                    messagebox.showwarning("Предупреждение",
+                                         f"Неверный формат даты 'с': {date_from}. Используйте YYYY-MM-DD")
+                    return pd.DataFrame()
+
+            if date_to:
+                try:
+                    date_to_parsed = pd.to_datetime(date_to)
+                    data = data[pd.to_datetime(data['Дата']) <= date_to_parsed]
+                except Exception:
+                    messagebox.showwarning("Предупреждение",
+                                         f"Неверный формат даты 'по': {date_to}. Используйте YYYY-MM-DD")
+                    return pd.DataFrame()
+
+        return data
 
     def build_map(self):
         """Построение карты заболеваемости (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
@@ -1772,7 +1846,11 @@ class MedicalAnalysisSystem:
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
             
             # Подготовка данных
-            data = self.current_data.copy()
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
+
             data['Дата'] = pd.to_datetime(data['Дата'])
             data['Месяц'] = data['Дата'].dt.month
             data['Год'] = data['Дата'].dt.year
@@ -1858,7 +1936,11 @@ class MedicalAnalysisSystem:
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 10))
             
             # Подготовка данных
-            data = self.current_data.copy()
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
+
             regional_data = data.groupby('Регион')['Количество'].sum().sort_values(ascending=False)
             
             # График 1: Столбчатая диаграмма по регионам
@@ -1948,7 +2030,11 @@ class MedicalAnalysisSystem:
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
             
             # Подготовка данных
-            data = self.current_data.copy()
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
+
             data = data.dropna(subset=['Возраст'])  # Убираем записи без возраста
             
             # Создание возрастных групп
@@ -2033,7 +2119,10 @@ class MedicalAnalysisSystem:
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
             
             # Подготовка данных для корреляционной матрицы
-            data = self.current_data.copy()
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
             
             # Выбираем только числовые колонки
             numeric_data = data.select_dtypes(include=[np.number])

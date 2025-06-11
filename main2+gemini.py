@@ -383,11 +383,22 @@ class MedicalAnalysisSystem:
         try:
             self.date_from.delete(0, tk.END)
             self.date_from.insert(0, "2020-01-01")
-            
+
             self.date_to.delete(0, tk.END)
             self.date_to.insert(0, "2024-12-31")
-            
+
             self.region_var.set("Все")
+
+            if hasattr(self, 'analysis_region_var'):
+                self.analysis_region_var.set('Все')
+            if hasattr(self, 'analysis_date_from'):
+                self.analysis_date_from.delete(0, tk.END)
+                self.analysis_date_from.insert(0, "2020-01-01")
+            if hasattr(self, 'analysis_date_to'):
+                self.analysis_date_to.delete(0, tk.END)
+                self.analysis_date_to.insert(0, "2024-12-31")
+            if hasattr(self, 'forecast_region_var'):
+                self.forecast_region_var.set('Все')
             
             # Показываем все данные
             if self.current_data is not None:
@@ -435,7 +446,8 @@ class MedicalAnalysisSystem:
         map_types = [
             ("По регионам", "regional"),
             ("Плотность населения", "density"),
-            ("Временная динамика", "temporal")
+            ("Временная динамика", "temporal"),
+            ("Карта Казахстана", "kazakhstan")
         ]
         
         col = 1
@@ -595,9 +607,27 @@ class MedicalAnalysisSystem:
         ttk.Button(analysis_panel, text="Выполнить анализ", 
                   command=self.perform_analysis).grid(row=1, column=3, padx=5, pady=5)
         
-        ttk.Button(analysis_panel, text="Сохранить график", 
+        ttk.Button(analysis_panel, text="Сохранить график",
                   command=self.save_analysis_plot).grid(row=1, column=4, padx=5, pady=5)
-        
+
+        # Регион для анализа
+        ttk.Label(analysis_panel, text="Регион:").grid(row=2, column=0, padx=5, pady=5, sticky='w')
+        self.analysis_region_var = tk.StringVar(value="Все")
+        self.analysis_region_combo = ttk.Combobox(analysis_panel, textvariable=self.analysis_region_var, width=20)
+        self.analysis_region_combo['values'] = ['Все']
+        self.analysis_region_combo.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky='w')
+
+        # Период анализа
+        ttk.Label(analysis_panel, text="Период с:").grid(row=2, column=3, padx=5, pady=5, sticky='e')
+        self.analysis_date_from = ttk.Entry(analysis_panel, width=12)
+        self.analysis_date_from.grid(row=2, column=4, padx=2, pady=5, sticky='w')
+        self.analysis_date_from.insert(0, "2020-01-01")
+
+        ttk.Label(analysis_panel, text="по:").grid(row=2, column=5, padx=5, pady=5, sticky='e')
+        self.analysis_date_to = ttk.Entry(analysis_panel, width=12)
+        self.analysis_date_to.grid(row=2, column=6, padx=2, pady=5, sticky='w')
+        self.analysis_date_to.insert(0, "2024-12-31")
+
         # Область для графиков
         self.analysis_plot_frame = ttk.LabelFrame(self.analysis_frame, text="Результаты анализа")
         self.analysis_plot_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -884,13 +914,13 @@ class MedicalAnalysisSystem:
         period_spin.grid(row=0, column=3, padx=5, pady=5, sticky='w')
         
         # Разделитель
-        ttk.Separator(forecast_panel, orient='vertical').grid(row=0, column=4, padx=10, pady=5, sticky='ns')
-        
-        # Кнопки
-        ttk.Button(forecast_panel, text="📊 Проверить библиотеки", 
-                command=self.show_library_status).grid(row=0, column=5, padx=5, pady=5)
-        
-        ttk.Button(forecast_panel, text="🚀 Построить прогноз", 
+        ttk.Label(forecast_panel, text="Регион:").grid(row=0, column=4, padx=5, pady=5, sticky='w')
+        self.forecast_region_var = tk.StringVar(value="Все")
+        self.forecast_region_combo = ttk.Combobox(forecast_panel, textvariable=self.forecast_region_var, width=20)
+        self.forecast_region_combo['values'] = ['Все']
+        self.forecast_region_combo.grid(row=0, column=5, padx=5, pady=5, sticky='w')
+
+        ttk.Button(forecast_panel, text="🚀 Построить прогноз",
                 command=self.build_forecast).grid(row=0, column=6, padx=10, pady=5)
         
         # Область для результатов
@@ -1343,11 +1373,56 @@ class MedicalAnalysisSystem:
             
             # Обновляем счетчик записей
             self.records_label.config(text=f"Записей: {len(filtered_data)}")
-            
+
         except Exception as e:
             error_text = f"Ошибка при расчете статистики: {str(e)}"
             self.stats_text.insert(1.0, error_text)
             self.stats_text.config(state=tk.DISABLED)
+
+    def get_analysis_filtered_data(self):
+        """Возвращает данные, отфильтрованные для анализа"""
+        if self.current_data is None:
+            return pd.DataFrame()
+
+        data = self.current_data.copy()
+
+        # Фильтр по заболеванию
+        disease_filter = self.disease_var.get()
+        if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
+            data = data[data['Заболевание'] == disease_filter]
+
+        # Фильтр по региону
+        if hasattr(self, 'analysis_region_var') and 'Регион' in data.columns:
+            region_filter = self.analysis_region_var.get()
+            if region_filter and region_filter != 'Все':
+                data = data[data['Регион'] == region_filter]
+
+        # Фильтр по дате
+        if hasattr(self, 'analysis_date_from') and hasattr(self, 'analysis_date_to'):
+            date_from = self.analysis_date_from.get().strip()
+            date_to = self.analysis_date_to.get().strip()
+
+            if date_from:
+                try:
+                    date_from_parsed = pd.to_datetime(date_from)
+                    data = data[pd.to_datetime(data['Дата']) >= date_from_parsed]
+                except Exception:
+                    messagebox.showwarning(
+                        "Предупреждение",
+                        f"Неверный формат даты 'с': {date_from}. Используйте YYYY-MM-DD")
+                    return pd.DataFrame()
+
+            if date_to:
+                try:
+                    date_to_parsed = pd.to_datetime(date_to)
+                    data = data[pd.to_datetime(data['Дата']) <= date_to_parsed]
+                except Exception:
+                    messagebox.showwarning(
+                        "Предупреждение",
+                        f"Неверный формат даты 'по': {date_to}. Используйте YYYY-MM-DD")
+                    return pd.DataFrame()
+
+        return data
 
     def build_map(self):
         """Построение карты заболеваемости (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
@@ -1368,6 +1443,8 @@ class MedicalAnalysisSystem:
                 self.build_density_map()
             elif map_type == "temporal":
                 self.build_temporal_map()
+            elif map_type == "kazakhstan":
+                self.build_kz_cartogram()
                 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при построении карты: {str(e)}")
@@ -1381,6 +1458,9 @@ class MedicalAnalysisSystem:
             disease_filter = self.map_disease.get()
             
             data = self.current_data.copy()
+            region_filter = getattr(self, 'forecast_region_var', None)
+            if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
+                data = data[data['Регион'] == region_filter]
             
             # Фильтр по заболеванию
             if disease_filter != 'Все' and 'Заболевание' in data.columns:
@@ -1437,7 +1517,7 @@ class MedicalAnalysisSystem:
                 color_label = "Среднее значение"
             
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
             
             # График 1: Столбчатая диаграмма
             colors = plt.cm.Reds(np.linspace(0.3, 1, len(regional_data)))
@@ -1520,7 +1600,7 @@ class MedicalAnalysisSystem:
         """Построение карты плотности (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
         try:
             # Создание scatter plot для имитации плотности
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
             
             # Подготовка данных
             data = self.current_data.copy()
@@ -1627,7 +1707,7 @@ class MedicalAnalysisSystem:
         """Построение временной карты (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
         try:
             # Создание временной карты
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
             
             # Подготовка данных по годам
             data = self.current_data.copy()
@@ -1739,9 +1819,80 @@ class MedicalAnalysisSystem:
             self.map_stats_text.insert(1.0, stats_text)
             
             self.update_status(f"Временная карта построена для {disease_filter}")
-            
+
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при построении временной карты: {str(e)}")
+
+    def build_kz_cartogram(self):
+        """Картограмма регионов Казахстана по выбранному показателю"""
+        try:
+            fig, ax = plt.subplots(figsize=(12, 8))
+
+            data = self.current_data.copy()
+            metric = self.map_metric.get()
+            period = self.map_period.get()
+            disease_filter = self.map_disease.get()
+
+            if disease_filter != 'Все' and 'Заболевание' in data.columns:
+                data = data[data['Заболевание'] == disease_filter]
+
+            if period != 'Все годы':
+                data['Год'] = pd.to_datetime(data['Дата']).dt.year
+                data = data[data['Год'] == int(period)]
+
+            if len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
+
+            if metric == 'Темп роста':
+                data['Год'] = pd.to_datetime(data['Дата']).dt.year
+                yearly = data.groupby(['Регион', 'Год'])['Количество'].sum().unstack(fill_value=0)
+                if yearly.shape[1] >= 2:
+                    last_year = yearly.columns[-1]
+                    prev_year = yearly.columns[-2]
+                    values = ((yearly[last_year] - yearly[prev_year]) / yearly[prev_year].replace(0, 1) * 100)
+                    color_label = 'Темп роста (%)'
+                else:
+                    values = data.groupby('Регион')['Количество'].sum()
+                    color_label = 'Количество случаев'
+            elif metric == 'Всего случаев':
+                values = data.groupby('Регион')['Количество'].sum()
+                color_label = 'Количество случаев'
+            else:
+                values = data.groupby('Регион')['Количество'].mean()
+                color_label = metric
+
+            with open('kazakhstan_regions.json', 'r', encoding='utf-8') as f:
+                coords = json.load(f)['regions']
+
+            lons = [coords[r]['lon'] for r in values.index if r in coords]
+            lats = [coords[r]['lat'] for r in values.index if r in coords]
+            vals = [values[r] for r in values.index if r in coords]
+
+            sc = ax.scatter(lons, lats, c=vals, cmap='coolwarm', s=300, edgecolors='black')
+
+            for region in values.index:
+                if region in coords:
+                    ax.text(coords[region]['lon'], coords[region]['lat'], region, ha='center', va='center', fontsize=8)
+
+            plt.colorbar(sc, ax=ax, label=color_label)
+            ax.set_title(f'{metric} по регионам Казахстана ({period})')
+            ax.set_xlabel('Долгота')
+            ax.set_ylabel('Широта')
+
+            for widget in self.map_plot_frame.winfo_children():
+                widget.destroy()
+
+            canvas = FigureCanvasTkAgg(fig, master=self.map_plot_frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+            self.map_stats_text.delete(1.0, tk.END)
+            self.map_stats_text.insert(1.0, f'Регионов: {len(values)}\nСреднее значение: {np.mean(vals):.1f}')
+            self.update_status('Карта Казахстана построена')
+
+        except Exception as e:
+            messagebox.showerror('Ошибка', f'Ошибка построения карты Казахстана: {str(e)}')
             
     def perform_analysis(self):
         """Выполнение выбранного типа анализа"""
@@ -1755,6 +1906,7 @@ class MedicalAnalysisSystem:
             # Очищаем предыдущие результаты
             for widget in self.analysis_plot_frame.winfo_children():
                 widget.destroy()
+            self.analysis_canvas = None
             
             if analysis_type == "seasonality":
                 self.analyze_seasonality()
@@ -1771,13 +1923,7 @@ class MedicalAnalysisSystem:
     def save_analysis_plot(self):
         """Сохранение текущего графика анализа"""
         try:
-            # Находим canvas в analysis_plot_frame
-            canvas_widget = None
-            for widget in self.analysis_plot_frame.winfo_children():
-                if hasattr(widget, 'figure'):
-                    canvas_widget = widget
-                    break
-            
+            canvas_widget = getattr(self, 'analysis_canvas', None)
             if canvas_widget is None:
                 messagebox.showwarning("Предупреждение", "Нет графика для сохранения!")
                 return
@@ -1837,10 +1983,13 @@ class MedicalAnalysisSystem:
         """Анализ сезонности заболеваний"""
         try:
             # Создание фигуры с множественными графиками
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
-            
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 8))
+
             # Подготовка данных
-            data = self.current_data.copy()
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
             data['Дата'] = pd.to_datetime(data['Дата'])
             data['Месяц'] = data['Дата'].dt.month
             data['Год'] = data['Дата'].dt.year
@@ -1913,6 +2062,10 @@ class MedicalAnalysisSystem:
             canvas = FigureCanvasTkAgg(fig, master=self.analysis_plot_frame)
             canvas.draw()
             canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+            self.analysis_canvas = canvas
+            self.analysis_canvas = canvas
+            self.analysis_canvas = canvas
+            self.analysis_canvas = canvas
             
             self.update_status("Анализ сезонности выполнен успешно")
             
@@ -1923,10 +2076,13 @@ class MedicalAnalysisSystem:
         """Анализ заболеваемости по регионам"""
         try:
             # Создание фигуры
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 10))
-            
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 8))
+
             # Подготовка данных
-            data = self.current_data.copy()
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
             regional_data = data.groupby('Регион')['Количество'].sum().sort_values(ascending=False)
             
             # График 1: Столбчатая диаграмма по регионам
@@ -2013,10 +2169,13 @@ class MedicalAnalysisSystem:
                 return
             
             # Создание фигуры
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
-            
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 8))
+
             # Подготовка данных
-            data = self.current_data.copy()
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
             data = data.dropna(subset=['Возраст'])  # Убираем записи без возраста
             
             # Создание возрастных групп
@@ -2098,10 +2257,13 @@ class MedicalAnalysisSystem:
         """Анализ корреляций между факторами"""
         try:
             # Создание фигуры
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
-            
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 8))
+
             # Подготовка данных для корреляционной матрицы
-            data = self.current_data.copy()
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
             
             # Выбираем только числовые колонки
             numeric_data = data.select_dtypes(include=[np.number])
@@ -2285,6 +2447,9 @@ class MedicalAnalysisSystem:
         try:
             # Подготовка данных
             data = self.current_data.copy()
+            region_filter = getattr(self, 'forecast_region_var', None)
+            if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
+                data = data[data['Регион'] == region_filter]
             data['Дата'] = pd.to_datetime(data['Дата'])
             monthly_data = data.groupby(pd.Grouper(key='Дата', freq='M'))['Количество'].sum()
             monthly_data = monthly_data[monthly_data > 0]
@@ -2389,7 +2554,7 @@ class MedicalAnalysisSystem:
                     return self.forecast_sarima()  # Рекурсивно с STATSMODELS_AVAILABLE = False
             
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 
@@ -2465,6 +2630,9 @@ class MedicalAnalysisSystem:
         try:
             # Подготовка данных
             data = self.current_data.copy()
+            region_filter = getattr(self, 'forecast_region_var', None)
+            if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
+                data = data[data['Регион'] == region_filter]
             data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
             data = data.dropna(subset=['Дата'])
             
@@ -2594,7 +2762,7 @@ class MedicalAnalysisSystem:
             plt.rcParams['axes.unicode_minus'] = False
             
             # Создание улучшенной визуализации
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
             
             # График 1: Прогноз (более чистый дизайн)
             try:
@@ -2739,6 +2907,9 @@ class MedicalAnalysisSystem:
         try:
             # Подготовка данных
             data = self.current_data.copy()
+            region_filter = getattr(self, 'forecast_region_var', None)
+            if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
+                data = data[data['Регион'] == region_filter]
             data['Дата'] = pd.to_datetime(data['Дата'])
             monthly_data = data.groupby(pd.Grouper(key='Дата', freq='M'))['Количество'].sum()
             monthly_data = monthly_data[monthly_data > 0]
@@ -2796,7 +2967,7 @@ class MedicalAnalysisSystem:
                                         periods=periods, freq='M')
             
             # График
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 
@@ -3001,7 +3172,7 @@ class MedicalAnalysisSystem:
             plt.rcParams['axes.unicode_minus'] = False
             
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
             
             # График 1: Прогноз
             # ИСПРАВЛЕНИЕ: Безопасное создание исторических дат
@@ -3495,6 +3666,9 @@ class MedicalAnalysisSystem:
             try:
                 # Подготовка данных
                 data = self.current_data.copy()
+                region_filter = getattr(self, 'forecast_region_var', None)
+                if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
+                    data = data[data['Регион'] == region_filter]
                 data['Дата'] = pd.to_datetime(data['Дата'])
                 monthly_data = data.groupby(pd.Grouper(key='Дата', freq='M'))['Количество'].sum()
                 monthly_data = monthly_data[monthly_data > 0]
@@ -3528,7 +3702,7 @@ class MedicalAnalysisSystem:
                                             periods=periods, freq='M')
                 
                 # График
-                fig, ax = plt.subplots(figsize=(12, 6))
+                fig, ax = plt.subplots(figsize=(12, 8))
                 
                 # Исторические данные
                 ax.plot(monthly_data.index, monthly_data.values, 

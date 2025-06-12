@@ -62,7 +62,7 @@ plt.rcParams['axes.unicode_minus'] = False
 class MedicalAnalysisSystem:
     def __init__(self, root):
         self.root = root
-        self.root.title("Система анализа заболеваний населения Казахстана v1.2 (Исправленная)")
+        self.root.title("Система анализа заболеваний населения Казахстана")
         self.root.geometry("1400x800")
         self.gemini_api_key = None
         # Инициализация переменных
@@ -520,7 +520,7 @@ class MedicalAnalysisSystem:
                 messagebox.showerror("Ошибка", f"Ошибка при экспорте: {str(e)}")
                 
     def create_map_tab(self):
-        """Создание вкладки с картами (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
+        """Создание вкладки с картами"""
         # Панель управления картой
         map_control_panel = ttk.LabelFrame(self.map_frame, text="Параметры карты")
         map_control_panel.pack(fill=tk.X, padx=5, pady=5)
@@ -540,7 +540,7 @@ class MedicalAnalysisSystem:
                         value=value).grid(row=0, column=col, padx=5)
             col += 1
         
-        # Выбор показателя (ИСПРАВЛЕНО)
+        # Выбор показателя 
         ttk.Label(map_control_panel, text="Показатель:").grid(row=1, column=0, padx=5, pady=5, sticky='w')
         self.map_metric = tk.StringVar()
         self.metric_combo = ttk.Combobox(map_control_panel, textvariable=self.map_metric, width=20, state="readonly")
@@ -551,7 +551,7 @@ class MedicalAnalysisSystem:
         self.metric_combo.set('Всего случаев')  # Устанавливаем значение по умолчанию
         self.metric_combo.grid(row=1, column=1, padx=5, pady=5, sticky='w')
         
-        # Временной период (ИСПРАВЛЕНО)
+        # Временной период 
         ttk.Label(map_control_panel, text="Период:").grid(row=1, column=2, padx=5, pady=5, sticky='w')
         self.map_period = tk.StringVar()
         self.period_combo = ttk.Combobox(map_control_panel, textvariable=self.map_period, width=15, state="readonly")
@@ -1221,7 +1221,7 @@ class MedicalAnalysisSystem:
             self.update_status(f"Загружено {len(self.current_data)} записей из базы данных")
 
     def apply_filters(self):
-        """Исправленный метод применения фильтров к данным"""
+        """Применение фильтров к данным"""
         if self.current_data is None:
             messagebox.showwarning("Предупреждение", "Нет данных для фильтрации!")
             return
@@ -1551,7 +1551,7 @@ class MedicalAnalysisSystem:
         return data
 
     def build_map(self):
-        """Построение карты заболеваемости (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
+        """Построение карты заболеваемости"""
         if self.current_data is None:
             messagebox.showwarning("Предупреждение", "Сначала загрузите данные!")
             return
@@ -1574,7 +1574,7 @@ class MedicalAnalysisSystem:
             messagebox.showerror("Ошибка", f"Ошибка при построении карты: {str(e)}")
 
     def build_regional_map(self):
-        """Построение региональной карты (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
+        """Построение региональной карты"""
         try:
             # Подготовка данных
             period = self.map_period.get()
@@ -1722,7 +1722,7 @@ class MedicalAnalysisSystem:
             messagebox.showerror("Ошибка", f"Ошибка при построении региональной карты: {str(e)}")
         
     def build_density_map(self):
-        """Построение карты плотности (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
+        """Построение карты плотности"""
         try:
             # Создание scatter plot для имитации плотности
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
@@ -1829,7 +1829,7 @@ class MedicalAnalysisSystem:
             messagebox.showerror("Ошибка", f"Ошибка при построении карты плотности: {str(e)}")
 
     def build_temporal_map(self):
-        """Построение временной карты (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
+        """Построение временной карты"""
         try:
             # Создание временной карты
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
@@ -2746,7 +2746,7 @@ class MedicalAnalysisSystem:
             messagebox.showerror("Ошибка", f"Ошибка при построении SARIMA прогноза: {str(e)}")
 
     def forecast_xgboost(self):
-        """Прогнозирование с использованием XGBoost (ИСПРАВЛЕННАЯ ВЕРСИЯ с кодировкой)"""
+        """Прогнозирование с использованием XGBoost"""
         if not XGBOOST_AVAILABLE:
             messagebox.showerror("Ошибка", 
                             "Библиотека XGBoost не установлена!\n\n"
@@ -2873,7 +2873,7 @@ class MedicalAnalysisSystem:
                 forecast_value = max(0, xgb_model.predict(X_new)[0])
                 forecast_values.append(forecast_value)
                 
-                # ИСПРАВЛЕНИЕ: Правильное создание дат прогноза
+                # Создание дат прогноза
                 try:
                     forecast_date = pd.Timestamp(year=int(new_year), month=int(new_month), day=1)
                     forecast_dates.append(forecast_date)
@@ -2884,7 +2884,7 @@ class MedicalAnalysisSystem:
                     forecast_date = last_known_date + pd.DateOffset(months=i+1)
                     forecast_dates.append(forecast_date)
             
-            # ИСПРАВЛЕНИЕ КОДИРОВКИ: Настройка matplotlib для кириллицы
+            # Настройка matplotlib для кириллицы
             plt.rcParams['font.family'] = ['DejaVu Sans', 'Arial Unicode MS', 'Tahoma', 'sans-serif']
             plt.rcParams['axes.unicode_minus'] = False
             
@@ -3026,7 +3026,7 @@ class MedicalAnalysisSystem:
             traceback.print_exc()
 
     def forecast_linear_regression(self):
-        """Прогнозирование с использованием линейной регрессии (исправленная версия)"""
+        """Прогнозирование с использованием линейной регрессии"""
         if not SKLEARN_AVAILABLE:
             messagebox.showerror("Ошибка", "Библиотека scikit-learn не установлена!")
             return
@@ -3156,7 +3156,7 @@ class MedicalAnalysisSystem:
             messagebox.showerror("Ошибка", f"Ошибка при построении прогноза Linear Regression: {str(e)}")
 
     def forecast_ml(self):
-        """Прогнозирование с использованием машинного обучения (ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
+        """Прогнозирование с использованием машинного обучения"""
         if not SKLEARN_AVAILABLE:
             messagebox.showerror("Ошибка", "Библиотека scikit-learn не установлена!")
             return
@@ -3165,7 +3165,7 @@ class MedicalAnalysisSystem:
             # Подготовка данных
             data = self.current_data.copy()
             
-            # ИСПРАВЛЕНИЕ: Более надежное преобразование дат
+            # Преобразование дат
             try:
                 data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
             except Exception as e:
@@ -3237,7 +3237,7 @@ class MedicalAnalysisSystem:
             last_month = int(monthly_data['Месяц'].iloc[-1])
             
             for i in range(periods):
-                # ИСПРАВЛЕНИЕ: Правильное вычисление новой даты
+                # Вычисление новой даты
                 new_period = last_period + i + 1
                 
                 # Правильный расчет года и месяца
@@ -3278,7 +3278,7 @@ class MedicalAnalysisSystem:
                 forecast_value = max(0, model.predict(X_new)[0])
                 forecast_values.append(forecast_value)
                 
-                # ИСПРАВЛЕНИЕ: Безопасное создание дат прогноза
+                # Создание дат прогноза
                 try:
                     # Проверяем корректность года и месяца
                     if 1 <= new_month <= 12 and 1900 <= new_year <= 2100:
@@ -3305,7 +3305,7 @@ class MedicalAnalysisSystem:
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # График 1: Прогноз
-            # ИСПРАВЛЕНИЕ: Безопасное создание исторических дат
+            # Создание исторических дат
             try:
                 historical_dates = []
                 for _, row in monthly_data.iterrows():
@@ -4164,8 +4164,7 @@ def generate_test_data():
         regions = ['Алматы', 'Астана', 'Караганда', 'Шымкент', 'Актобе', 
                 'Павлодар', 'Тараз', 'Усть-Каменогорск', 'Костанай', 'Атырау',
                 'Петропавловск', 'Актау', 'Кокшетау', 'Семей', 'Талдыкорган']
-        diseases = ['ОРВИ', 'Грипп', 'Пневмония', 'Диабет', 'Гипертония', 
-                'Бронхит', 'Астма', 'Гастрит', 'Артрит', 'Мигрень']
+        diseases = ['ОРВИ', 'Диабет', 'Гипертония']
         
         data = []
         record_id = 1

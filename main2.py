@@ -3901,7 +3901,12 @@ class MedicalAnalysisSystem:
             pdf.add_font('DejaVu', '', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', uni=True)
             pdf.set_font('DejaVu', size=12)
             for line in content.splitlines():
-                pdf.multi_cell(0, 10, txt=line)
+                clean_line = (
+                    line.replace("═", "=")
+                    .replace("║", "|")
+                )
+                clean_line = "".join(ch for ch in clean_line if ord(ch) <= 0xFFFF)
+                pdf.multi_cell(0, 10, txt=clean_line)
             pdf.output(filename)
             messagebox.showinfo("Успех", f"PDF отчет сохранен: {os.path.basename(filename)}")
 

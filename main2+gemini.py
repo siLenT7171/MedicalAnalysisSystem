@@ -165,9 +165,17 @@ class MedicalAnalysisSystem:
             cursor.execute("SELECT COUNT(*) FROM patients_data")
             if cursor.fetchone()[0] == 0:
                 df = generate_test_data()
-                df[['Дата', 'Регион', 'Заболевание', 'Количество', 'Возраст', 'Пол']].to_sql(
-                    'patients_data', conn, if_exists='append', index=False
+                df_db = df[['Дата', 'Регион', 'Заболевание', 'Количество', 'Возраст', 'Пол']].rename(
+                    columns={
+                        'Дата': 'date',
+                        'Регион': 'region',
+                        'Заболевание': 'disease',
+                        'Количество': 'count',
+                        'Возраст': 'age',
+                        'Пол': 'gender',
+                    }
                 )
+                df_db.to_sql('patients_data', conn, if_exists='append', index=False)
 
             cursor.execute("SELECT COUNT(*) FROM weather_factors")
             if cursor.fetchone()[0] == 0:

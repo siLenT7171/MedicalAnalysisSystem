@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Профессиональная система анализа медицинских данных (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-Версия: 1.2
-Автор: Система анализа заболеваний населения РК
-"""
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -31,29 +26,23 @@ try:
     from sklearn.linear_model import LinearRegression
     from sklearn.preprocessing import PolynomialFeatures
     SKLEARN_AVAILABLE = True
-    print("✅ scikit-learn загружен успешно")
 except ImportError as e:
     SKLEARN_AVAILABLE = False
-    print(f"❌ scikit-learn не установлен: {e}")
 
 # Проверка openpyxl
 try:
     import openpyxl
     from openpyxl.styles import Font, Alignment
     OPENPYXL_AVAILABLE = True
-    print("✅ openpyxl загружен успешно")
 except ImportError as e:
     OPENPYXL_AVAILABLE = False
-    print(f"❌ openpyxl не установлен: {e}")
 
 # Проверка XGBoost
 try:
     import xgboost as xgb
     XGBOOST_AVAILABLE = True
-    print("✅ XGBoost загружен успешно")
 except ImportError as e:
     XGBOOST_AVAILABLE = False
-    print(f"❌ XGBoost не установлен: {e}")
 
 # Проверка statsmodels
 try:
@@ -61,16 +50,8 @@ try:
     from statsmodels.tsa.arima.model import ARIMA
     from statsmodels.tsa.stattools import adfuller
     STATSMODELS_AVAILABLE = True
-    print("✅ statsmodels загружен успешно")
 except ImportError as e:
     STATSMODELS_AVAILABLE = False
-    print(f"❌ statsmodels не установлен: {e}")
-
-print(f"\nСтатус библиотек:")
-print(f"- scikit-learn: {SKLEARN_AVAILABLE}")
-print(f"- XGBoost: {XGBOOST_AVAILABLE}")
-print(f"- statsmodels: {STATSMODELS_AVAILABLE}")
-print(f"- openpyxl: {OPENPYXL_AVAILABLE}")
 
 # Настройка стиля для matplotlib
 plt.style.use('default')

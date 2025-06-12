@@ -224,14 +224,13 @@ class MedicalAnalysisSystem:
     def _populate_demographics(self, cursor):
         """Загрузка данных миграции из файла"""
         try:
-            file_path = os.path.join('data', 'Внутренняя миграция.xlsx')
+            file_path = os.path.join('data', 'migrations.xlsx')
             if not os.path.exists(file_path):
                 print('Файл миграции не найден')
                 return
-            df = pd.read_excel(file_path, sheet_name='Прибывшие', header=6)
+            df = pd.read_excel(file_path, sheet_name='Прибывшие', header=1)
             df = df.dropna(how='all')
             df = df[df['Unnamed: 0'].notna()]
-            df = df.iloc[1:]  # пропускаем "Республика Казахстан"
             df = df.rename(columns={'Unnamed: 0': 'region'})
             months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
                       'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь']
@@ -2608,6 +2607,9 @@ class MedicalAnalysisSystem:
                 messagebox.showwarning("Предупреждение", "Нет данных миграции для выбранных фильтров")
                 return
 
+            if not (region_filter and region_filter != 'Все'):
+                demo = demo.groupby(['year', 'month'])['migrants'].sum().reset_index()
+
             merged = pd.merge(cases_month, demo, on=['year', 'month'], how='inner')
             merged.sort_values(['year', 'month'], inplace=True)
             merged['cases_growth'] = merged['Количество'].pct_change() * 100
@@ -2618,6 +2620,8 @@ class MedicalAnalysisSystem:
             ax1.plot(merged['month'], merged['Количество'], marker='o', label=disease_label)
             ax1.plot(merged['month'], merged['migrants'], marker='s', label='Мигранты')
             ax1.set_xticks(merged['month'])
+            month_labels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
+            ax1.set_xticklabels([month_labels[m-1] for m in merged['month']])
             ax1.set_xlabel('Месяц')
             ax1.set_ylabel('Количество')
             ax1.set_title('Заболеваемость и миграция')
@@ -2628,6 +2632,7 @@ class MedicalAnalysisSystem:
             ax2.bar(merged['month'] + 0.2, merged['mig_growth'], width=0.4, label='Прирост мигрантов')
             ax2.axhline(0, color='black', linewidth=0.8)
             ax2.set_xticks(merged['month'])
+            ax2.set_xticklabels([month_labels[m-1] for m in merged['month']])
             ax2.set_xlabel('Месяц')
             ax2.set_ylabel('%')
             ax2.set_title('Прирост по сравнению с предыдущим месяцем')

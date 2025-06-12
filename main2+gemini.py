@@ -144,11 +144,6 @@ class MedicalAnalysisSystem:
         if XGBOOST_AVAILABLE:
             forecast_menu.add_command(label="Прогноз XGBoost", command=self.forecast_xgboost)
         
-        # Меню Справка
-        help_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Справка", menu=help_menu)
-        help_menu.add_command(label="О программе", command=self.show_about)
-        
     def create_toolbar(self):
         """Создание панели инструментов"""
         toolbar = ttk.Frame(self.root)
@@ -3604,63 +3599,6 @@ class MedicalAnalysisSystem:
             except Exception as e:
                 messagebox.showerror("Ошибка", f"Ошибка при сохранении: {str(e)}")
 
-    def show_about(self):
-        """Показать информацию о программе"""
-        
-        # Безопасная проверка доступности библиотек
-        def check_library(var_name):
-            try:
-                return globals()[var_name]
-            except (NameError, KeyError):
-                return False
-        
-        sklearn_status = "✅ Доступна" if check_library('SKLEARN_AVAILABLE') else "❌ Не установлена"
-        xgboost_status = "✅ Доступна" if check_library('XGBOOST_AVAILABLE') else "❌ Не установлена"
-        statsmodels_status = "✅ Доступна" if check_library('STATSMODELS_AVAILABLE') else "❌ Не установлена"
-        openpyxl_status = "✅ Доступна" if check_library('OPENPYXL_AVAILABLE') else "❌ Не установлена"
-        
-        about_text = f"""
-    Система анализа заболеваний населения Казахстана
-    Версия 1.2 (Исправленная с XGBoost)
-
-    Разработано для анализа и прогнозирования
-    заболеваемости населения РК.
-
-    Основные возможности:
-    - Загрузка и обработка медицинских данных
-    - Многофакторный анализ заболеваемости
-    - Интеллектуальная фильтрация данных
-    - Продвинутое прогнозирование (SARIMA, ML, XGBoost)
-    - Профессиональные отчеты в разных форматах
-    - Интерактивная визуализация на картах
-    - Экспорт в PDF, Excel, Word, HTML
-
-    Статус библиотек:
-    - scikit-learn: {sklearn_status}
-    - XGBoost: {xgboost_status}
-    - statsmodels: {statsmodels_status}
-    - openpyxl: {openpyxl_status}
-
-    Модели прогнозирования:
-    - SARIMA: Авторегрессионная модель с сезонностью
-    - Linear Regression: Линейная регрессия с сезонными признаками
-    - Random Forest: Ансамбль деревьев решений
-    - XGBoost: Градиентный бустинг (требует установки xgboost)
-
-    Технические характеристики:
-    - Python 3.6+
-    - Pandas, NumPy, Matplotlib
-    - Tkinter GUI
-    - SQLite база данных
-
-    Для установки недостающих библиотек:
-    pip install xgboost statsmodels openpyxl scikit-learn
-
-    © 2025 Система здравоохранения РК
-    Версия: 1.2 (build {datetime.now().strftime('%Y%m%d')})
-        """
-        messagebox.showinfo("О программе", about_text)
-
     def forecast_linear_regression(self):
             """Прогнозирование с использованием линейной регрессии"""
             if not SKLEARN_AVAILABLE:
@@ -4217,8 +4155,8 @@ class MedicalAnalysisSystem:
         try:
             pdf = FPDF()
             pdf.add_page()
-            pdf.add_font('DejaVu', '', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', uni=True)
-            pdf.set_font('DejaVu', size=12)
+            pdf.add_font('Arial', '', 'C:\\Windows\\Fonts\\arial.ttf', uni=True)
+            pdf.set_font('Arial', size=12)
             for line in content.splitlines():
                 pdf.multi_cell(0, 10, txt=line)
             pdf.output(filename)

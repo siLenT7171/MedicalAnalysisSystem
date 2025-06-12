@@ -2893,8 +2893,48 @@ class MedicalAnalysisSystem:
                     print(f"Ошибка ARIMA: {e}, используем упрощенную модель")
                     return self.forecast_sarima()  # Рекурсивно с STATSMODELS_AVAILABLE = False
             
+            # Оценка точности на последних месяцах (простое разделение train/test)
+            mae = None
+            r2 = None
+            test_size = min(6, len(monthly_data) // 3)
+            if test_size >= 3:
+                train_series = monthly_data[:-test_size]
+                test_series = monthly_data[-test_size:]
+                try:
+                    if STATSMODELS_AVAILABLE and best_params is not None:
+                        cv_model = ARIMA(train_series, order=best_params).fit()
+                        cv_forecast = cv_model.forecast(steps=test_size)
+                    else:
+                        X = np.arange(len(train_series))
+                        t_coef = np.polyfit(X, train_series.values, 1)
+                        seasonal_component = np.zeros(12)
+                        for i in range(12):
+                            mv = [train_series.iloc[j] for j in range(i, len(train_series), 12)]
+                            if mv:
+                                seasonal_component[i] = np.mean(mv) - train_series.mean()
+                        last_date_cv = train_series.index[-1]
+                        cv_forecast = []
+                        for i in range(test_size):
+                            trend_val = t_coef[0] * (len(train_series) + i) + t_coef[1]
+                            month_idx = (last_date_cv.month + i) % 12
+                            season_val = seasonal_component[month_idx]
+                            cv_forecast.append(max(0, trend_val + season_val))
+                        cv_forecast = np.array(cv_forecast)
+
+                    if SKLEARN_AVAILABLE:
+                        mae = mean_absolute_error(test_series.values, cv_forecast)
+                        r2 = r2_score(test_series.values, cv_forecast)
+                    else:
+                        mae = float(np.mean(np.abs(test_series.values - cv_forecast)))
+                        ss_res = np.sum((test_series.values - cv_forecast) ** 2)
+                        ss_tot = np.sum((test_series.values - np.mean(test_series.values)) ** 2)
+                        r2 = 1 - ss_res / ss_tot if ss_tot != 0 else float('nan')
+                except Exception:
+                    mae = None
+                    r2 = None
+
             # Создание графика
-            fig, ax1 = plt.subplots(figsize=(12, 7))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 
@@ -2904,7 +2944,10 @@ class MedicalAnalysisSystem:
             
             ax1.set_xlabel('Дата')
             ax1.set_ylabel('Количество случаев')
-            ax1.set_title(f'SARIMA прогноз на {periods} месяцев\n{method_name}', fontsize=14)
+            metrics_text = ''
+            if mae is not None and r2 is not None:
+                metrics_text = f"\nMAE: {mae:.1f}, R²: {r2:.3f}"
+            ax1.set_title(f'SARIMA прогноз на {periods} месяцев\n{method_name}{metrics_text}', fontsize=14)
             ax1.legend()
             ax1.grid(True, alpha=0.3)
             
@@ -2950,10 +2993,17 @@ class MedicalAnalysisSystem:
                 'dates': forecast_dates,
                 'values': forecast_values,
                 'model': 'SARIMA',
-                'method_details': method_name
+                'method_details': method_name,
+                'mae': mae,
+                'r2': r2
             }
             
-            self.update_status(f"SARIMA прогноз построен на {periods} месяцев")
+            if mae is not None and r2 is not None:
+                self.update_status(
+                    f"SARIMA прогноз построен на {periods} месяцев (MAE: {mae:.1f}, R²: {r2:.3f})"
+                )
+            else:
+                self.update_status(f"SARIMA прогноз построен на {periods} месяцев")
             
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при построении SARIMA прогноза: {str(e)}")

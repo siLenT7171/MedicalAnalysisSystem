@@ -81,135 +81,37 @@ class MedicalAnalysisSystem:
         
         # Применение темы
         self.apply_theme()
-
-        # Загрузка медицинских данных из базы
-        self.load_data_from_db()
         
     def init_database(self):
-        """Создание базы данных и заполнение тестовыми данными"""
+        """Инициализация базы данных SQLite"""
         try:
             self.db_path = "medical_data.db"
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-
-            # Основные таблицы
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS patients_data (
+            
+            # Создание таблиц
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS analysis_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     date TEXT,
-                    region TEXT,
-                    disease TEXT,
-                    count INTEGER,
-                    age INTEGER,
-                    gender TEXT
+                    analysis_type TEXT,
+                    parameters TEXT,
+                    results TEXT
                 )
-                """
-            )
-
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS regions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT,
-                    latitude REAL,
-                    longitude REAL
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
                 )
-                """
-            )
-
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS weather_factors (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    region TEXT,
-                    month INTEGER,
-                    avg_temp REAL,
-                    precipitation REAL
-                )
-                """
-            )
-
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS forecast_results (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    model_name TEXT,
-                    forecast_date TEXT,
-                    region TEXT,
-                    disease TEXT,
-                    predicted_count INTEGER,
-                    actual_count INTEGER
-                )
-                """
-            )
-
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS report_archive (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    report_date TEXT,
-                    report_type TEXT,
-                    content TEXT
-                )
-                """
-            )
-
-            conn.commit()
-
-            # Заполнение тестовыми данными при первом запуске
-            cursor.execute("SELECT COUNT(*) FROM regions")
-            if cursor.fetchone()[0] == 0:
-                self._populate_regions(cursor)
-
-            cursor.execute("SELECT COUNT(*) FROM patients_data")
-            if cursor.fetchone()[0] == 0:
-                df = generate_test_data()
-                df[['Дата', 'Регион', 'Заболевание', 'Количество', 'Возраст', 'Пол']].to_sql(
-                    'patients_data', conn, if_exists='append', index=False
-                )
-
-            cursor.execute("SELECT COUNT(*) FROM weather_factors")
-            if cursor.fetchone()[0] == 0:
-                weather = generate_weather_data()
-                weather.to_sql('weather_factors', conn, if_exists='append', index=False)
-
+            ''')
+            
             conn.commit()
             conn.close()
-
+            
         except Exception as e:
-            messagebox.showerror(
-                "Ошибка БД", f"Ошибка инициализации базы данных: {str(e)}"
-            )
-
-    def _populate_regions(self, cursor):
-        """Заполнение таблицы regions начальными данными"""
-        try:
-            with open('kazakhstan_regions.json', 'r', encoding='utf-8') as f:
-                regions = json.load(f)['regions']
-            rows = [(name, data['lat'], data['lon']) for name, data in regions.items()]
-            cursor.executemany(
-                "INSERT INTO regions(name, latitude, longitude) VALUES (?, ?, ?)",
-                rows,
-            )
-        except Exception as e:
-            print(f"Не удалось заполнить таблицу regions: {e}")
-
-    def load_regions_from_db(self):
-        """Загрузка координат регионов из базы"""
-        conn = sqlite3.connect(self.db_path)
-        try:
-            df = pd.read_sql_query(
-                "SELECT name, latitude, longitude FROM regions",
-                conn,
-            )
-        finally:
-            conn.close()
-
-        self.region_coords = {
-            row['name']: {'lat': row['latitude'], 'lon': row['longitude']}
-            for _, row in df.iterrows()
-        }
+            messagebox.showerror("Ошибка БД", f"Ошибка инициализации базы данных: {str(e)}")
         
     def create_menu(self):
         """Создание главного меню"""
@@ -1187,28 +1089,8 @@ class MedicalAnalysisSystem:
                     return False, "Колонка 'Количество' не содержит числовых значений"
             except:
                 return False, "Колонка 'Количество' должна содержать числовые значения"
-
+        
         return True, "Данные корректны"
-
-    def load_data_from_db(self):
-        """Загрузка медицинских данных из базы данных"""
-        conn = sqlite3.connect(self.db_path)
-        try:
-            self.current_data = pd.read_sql_query(
-                "SELECT id AS ID, date AS 'Дата', region AS 'Регион', disease AS 'Заболевание', "
-                "count AS 'Количество', age AS 'Возраст', gender AS 'Пол' FROM patients_data",
-                conn,
-            )
-        finally:
-            conn.close()
-
-        self.load_regions_from_db()
-
-        if not self.current_data.empty:
-            self.update_data_display()
-            self.update_filters()
-            self.update_map_filters()
-            self.update_status(f"Загружено {len(self.current_data)} записей из базы данных")
 
     def apply_filters(self):
         """Исправленный метод применения фильтров к данным"""
@@ -1977,7 +1859,8 @@ class MedicalAnalysisSystem:
                 values = data.groupby('Регион')['Количество'].mean()
                 color_label = metric
 
-            coords = getattr(self, 'region_coords', {})
+            with open('kazakhstan_regions.json', 'r', encoding='utf-8') as f:
+                coords = json.load(f)['regions']
 
             lons = [coords[r]['lon'] for r in values.index if r in coords]
             lats = [coords[r]['lat'] for r in values.index if r in coords]
@@ -4236,34 +4119,6 @@ def generate_test_data():
         }
         return pd.DataFrame(simple_data)
 
-
-def generate_weather_data():
-    """Создает упрощённые погодные данные по регионам"""
-    np.random.seed(1)
-    regions = [
-        "Алматы",
-        "Астана",
-        "Шымкент",
-        "Караганда",
-        "Актобе",
-        "Павлодар",
-    ]
-
-    months = range(1, 13)
-    data = []
-    for region in regions:
-        base_temps = np.array([-6, -5, 0, 10, 18, 23, 26, 25, 18, 10, 2, -4])
-        base_temps += np.random.normal(0, 1, 12)
-        precipitation = np.random.randint(10, 80, 12)
-        for m in months:
-            data.append({
-                "region": region,
-                "month": m,
-                "avg_temp": float(base_temps[m - 1]),
-                "precipitation": int(precipitation[m - 1]),
-            })
-    return pd.DataFrame(data)
-
 def main():
     """Главная функция запуска приложения"""
     try:
@@ -4278,7 +4133,32 @@ def main():
         # Создание приложения
         app = MedicalAnalysisSystem(root)
         
-        messagebox.showinfo("Данные загружены", f"Загружено {len(app.current_data)} записей из базы данных.")
+        # Предлагаем загрузить тестовые данные
+        response = messagebox.askyesno("Система анализа заболеваний РК v1.2", 
+                                    "Добро пожаловать в систему анализа заболеваний!\n\n"
+                                    "Загрузить демонстрационные данные для ознакомления с системой?")
+        if response:
+            try:
+                app.update_status("Генерация демонстрационных данных...")
+                app.root.update()
+                
+                app.current_data = generate_test_data()
+                app.update_data_display()
+                app.update_map_filters()  # Обновляем фильтры карты после загрузки
+                app.update_status(f"Загружены демонстрационные данные: {len(app.current_data)} записей")
+                
+                messagebox.showinfo("Данные загружены", 
+                                f"Демонстрационные данные успешно загружены!\n\n"
+                                f"📊 Записей: {len(app.current_data):,}\n"
+                                f"🏥 Регионов: {app.current_data['Регион'].nunique()}\n"
+                                f"💊 Заболеваний: {app.current_data['Заболевание'].nunique()}\n"
+                                f"📅 Период: {app.current_data['Дата'].min()} - {app.current_data['Дата'].max()}\n\n"
+                                f"Теперь вы можете исследовать функции системы!")
+                
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Ошибка при генерации данных: {str(e)}")
+                app.update_status("Ошибка загрузки демонстрационных данных")
+        
         # Запуск главного цикла
         root.mainloop()
         

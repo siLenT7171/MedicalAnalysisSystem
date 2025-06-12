@@ -1027,13 +1027,7 @@ class MedicalAnalysisSystem:
                                 "• XGBoost: Градиентный бустинг высокой точности", 
                             font=('Arial', 12), justify='center', foreground='#2c3e50')
         info_label.pack(expand=True)
-        
-        # Нижняя информационная строка
-        bottom_info = ttk.Label(info_frame, 
-                            text="💡 Совет: Для данных с явной сезонностью используйте SARIMA, для сложных паттернов - XGBoost", 
-                            font=('Arial', 10), foreground='#7f8c8d', justify='center')
-        bottom_info.pack(side='bottom', pady=10)
-        
+
     def create_report_tab(self):
         """Создание вкладки отчетов"""
         # Панель настроек отчета
@@ -3535,11 +3529,11 @@ class MedicalAnalysisSystem:
                 
                 # Прогноз
                 ax.plot(forecast_dates, forecast_values, 
-                    label='Прогноз (Polynomial Regression)', color='red', marker='s', linestyle='--', linewidth=2)
+                    label='Прогноз (Linear Regression)', color='red', marker='s', linestyle='--', linewidth=2)
                 
                 ax.set_xlabel('Дата')
                 ax.set_ylabel('Количество случаев')
-                ax.set_title(f'Прогноз заболеваемости на {periods} месяцев (Polynomial Regression)', fontsize=14)
+                ax.set_title(f'Прогноз заболеваемости на {periods} месяцев (Linear Regression)', fontsize=14)
                 ax.legend()
                 ax.grid(True, alpha=0.3)
                 

@@ -140,6 +140,18 @@ class MedicalAnalysisSystem:
         cursor.execute("SELECT COUNT(*) FROM patients_data")
         if cursor.fetchone()[0] == 0:
             df = generate_test_data()
+            # Приводим имена колонок к именам таблицы БД
+            df = df.rename(
+                columns={
+                    "Дата": "date",
+                    "Регион": "region",
+                    "Заболевание": "disease",
+                    "Количество": "count",
+                    "Возраст": "age",
+                    "Пол": "gender",
+                }
+            )
+            df.drop(columns=["ID"], inplace=True)
             df.to_sql("patients_data", conn, if_exists="append", index=False)
 
         cursor.execute("SELECT COUNT(*) FROM weather_factors")

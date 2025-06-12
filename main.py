@@ -132,6 +132,18 @@ class MedicalAnalysisSystem:
 
             cursor.execute(
                 """
+                CREATE TABLE IF NOT EXISTS demographics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    region TEXT,
+                    year INTEGER,
+                    month INTEGER,
+                    migrants INTEGER
+                )
+                """
+            )
+
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS forecast_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     model_name TEXT,
@@ -184,6 +196,10 @@ class MedicalAnalysisSystem:
                 weather = generate_weather_data()
                 weather.to_sql('weather_factors', conn, if_exists='append', index=False)
 
+            cursor.execute("SELECT COUNT(*) FROM demographics")
+            if cursor.fetchone()[0] == 0:
+                self._populate_demographics(cursor)
+
             conn.commit()
             conn.close()
 
@@ -204,6 +220,35 @@ class MedicalAnalysisSystem:
             )
         except Exception as e:
             print(f"Не удалось заполнить таблицу regions: {e}")
+
+    def _populate_demographics(self, cursor):
+        """Загрузка данных миграции из файла"""
+        try:
+            file_path = os.path.join('data', 'Внутренняя миграция.xlsx')
+            if not os.path.exists(file_path):
+                print('Файл миграции не найден')
+                return
+            df = pd.read_excel(file_path, sheet_name='Прибывшие', header=6)
+            df = df.dropna(how='all')
+            df = df[df['Unnamed: 0'].notna()]
+            df = df.iloc[1:]  # пропускаем "Республика Казахстан"
+            df = df.rename(columns={'Unnamed: 0': 'region'})
+            months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+                      'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь']
+            records = []
+            for _, row in df.iterrows():
+                region = str(row['region']).strip()
+                for m_idx, month_name in enumerate(months, start=1):
+                    val = row.get(month_name)
+                    if pd.isna(val):
+                        continue
+                    records.append((region, 2024, m_idx, int(val)))
+            cursor.executemany(
+                "INSERT INTO demographics(region, year, month, migrants) VALUES (?, ?, ?, ?)",
+                records,
+            )
+        except Exception as e:
+            print(f"Не удалось заполнить demographics: {e}")
 
     def load_regions_from_db(self):
         """Загрузка координат регионов из базы"""
@@ -672,7 +717,9 @@ class MedicalAnalysisSystem:
             ("Сезонность", "seasonality"),
             ("По регионам", "regions"),
             ("По возрастам", "age_groups"),
-            ("Корреляция", "correlation")
+            ("Корреляция", "correlation"),
+            ("Демография", "demographic"),
+            ("Погода", "weather")
         ]
         
         col = 1
@@ -2040,6 +2087,10 @@ class MedicalAnalysisSystem:
                 self.analyze_age_groups()
             elif analysis_type == "correlation":
                 self.analyze_correlation()
+            elif analysis_type == "demographic":
+                self.analyze_demographic()
+            elif analysis_type == "weather":
+                self.analyze_weather_cases()
                 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при выполнении анализа: {str(e)}")
@@ -2492,6 +2543,134 @@ class MedicalAnalysisSystem:
             
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при анализе корреляций: {str(e)}")
+
+    def analyze_demographic(self):
+        """Анализ взаимосвязи ОРВИ и миграции"""
+        try:
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
+                return
+
+            orvi = data[data.get('Заболевание') == 'ОРВИ'].copy()
+            if orvi.empty:
+                messagebox.showwarning("Предупреждение", "Нет данных по ОРВИ для анализа")
+                return
+            orvi['Дата_dt'] = pd.to_datetime(orvi['Дата'])
+            orvi['year'] = orvi['Дата_dt'].dt.year
+            orvi['month'] = orvi['Дата_dt'].dt.month
+            orvi_month = orvi.groupby(['year', 'month'])['Количество'].sum().reset_index()
+
+            conn = sqlite3.connect(self.db_path)
+            try:
+                query = "SELECT region, year, month, migrants FROM demographics"
+                cond = []
+                params = []
+                region_filter = self.analysis_region_var.get()
+                if region_filter and region_filter != 'Все':
+                    cond.append("region = ?")
+                    params.append(region_filter)
+                if cond:
+                    query += " WHERE " + " AND ".join(cond)
+                demo = pd.read_sql_query(query, conn, params=params)
+            finally:
+                conn.close()
+
+            if demo.empty:
+                messagebox.showwarning("Предупреждение", "Нет данных миграции для выбранных фильтров")
+                return
+
+            merged = pd.merge(orvi_month, demo, on=['year', 'month'], how='inner')
+            merged.sort_values(['year', 'month'], inplace=True)
+            merged['orvi_growth'] = merged['Количество'].pct_change() * 100
+            merged['mig_growth'] = merged['migrants'].pct_change() * 100
+
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 7))
+            ax1.plot(merged['month'], merged['Количество'], marker='o', label='ОРВИ')
+            ax1.plot(merged['month'], merged['migrants'], marker='s', label='Мигранты')
+            ax1.set_xticks(merged['month'])
+            ax1.set_xlabel('Месяц')
+            ax1.set_ylabel('Количество')
+            ax1.set_title('ОРВИ и миграция')
+            ax1.grid(True, alpha=0.3)
+            ax1.legend()
+
+            ax2.bar(merged['month'] - 0.2, merged['orvi_growth'], width=0.4, label='Прирост ОРВИ')
+            ax2.bar(merged['month'] + 0.2, merged['mig_growth'], width=0.4, label='Прирост мигрантов')
+            ax2.axhline(0, color='black', linewidth=0.8)
+            ax2.set_xticks(merged['month'])
+            ax2.set_xlabel('Месяц')
+            ax2.set_ylabel('%')
+            ax2.set_title('Прирост по сравнению с предыдущим месяцем')
+            ax2.grid(True, alpha=0.3)
+            ax2.legend()
+
+            plt.tight_layout()
+            canvas = FigureCanvasTkAgg(fig, master=self.analysis_plot_frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+            self.update_status('Демографический анализ выполнен успешно')
+            self.analysis_canvas = canvas
+        except Exception as e:
+            messagebox.showerror('Ошибка', f'Ошибка демографического анализа: {str(e)}')
+
+    def analyze_weather_cases(self):
+        """Анализ связи заболеваемости и погоды"""
+        try:
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning('Предупреждение', 'Нет данных для выбранных фильтров')
+                return
+            data['Дата_dt'] = pd.to_datetime(data['Дата'])
+            data['month'] = data['Дата_dt'].dt.month
+            cases = data.groupby('month')['Количество'].sum()
+
+            conn = sqlite3.connect(self.db_path)
+            try:
+                query = "SELECT region, month, avg_temp, precipitation FROM weather_factors"
+                cond = []
+                params = []
+                region_filter = self.analysis_region_var.get()
+                if region_filter and region_filter != 'Все':
+                    cond.append('region = ?')
+                    params.append(region_filter)
+                if cond:
+                    query += ' WHERE ' + ' AND '.join(cond)
+                weather = pd.read_sql_query(query, conn, params=params)
+            finally:
+                conn.close()
+
+            if weather.empty:
+                messagebox.showwarning('Предупреждение', 'Нет погодных данных для выбранных фильтров')
+                return
+
+            weather = weather.groupby('month')[['avg_temp', 'precipitation']].mean()
+            df = pd.concat([cases, weather], axis=1).dropna()
+
+            fig, ax1 = plt.subplots(figsize=(10, 5))
+            ax1.plot(df.index, df['Количество'], color='steelblue', marker='o', label='Случаи')
+            ax1.set_xlabel('Месяц')
+            ax1.set_ylabel('Количество случаев')
+            ax1.grid(True, alpha=0.3)
+            ax1.legend(loc='upper left')
+
+            ax2 = ax1.twinx()
+            ax2.plot(df.index, df['avg_temp'], color='orange', marker='s', label='Температура')
+            ax2.bar(df.index, df['precipitation'], alpha=0.2, color='green', label='Осадки')
+            ax2.set_ylabel('Температура / Осадки')
+            ax2.legend(loc='upper right')
+
+            plt.title('Заболеваемость и погодные условия')
+            plt.tight_layout()
+            canvas = FigureCanvasTkAgg(fig, master=self.analysis_plot_frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+            self.update_status('Анализ погоды выполнен успешно')
+            self.analysis_canvas = canvas
+        except Exception as e:
+            messagebox.showerror('Ошибка', f'Ошибка анализа погоды: {str(e)}')
                     
     def build_forecast(self):
         """Построение прогноза заболеваемости"""

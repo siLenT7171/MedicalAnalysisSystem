@@ -1569,9 +1569,19 @@ class MedicalAnalysisSystem:
             date_from = self.analysis_date_from.get().strip()
             date_to = self.analysis_date_to.get().strip()
 
+            available_min = pd.to_datetime(data['Дата']).min()
+            available_max = pd.to_datetime(data['Дата']).max()
+
+            msg_parts = []
+
             if date_from:
                 try:
                     date_from_parsed = pd.to_datetime(date_from)
+                    if date_from_parsed < available_min:
+                        msg_parts.append(
+                            f"Начальные данные доступны только с {available_min.date()}"
+                        )
+                        date_from_parsed = available_min
                     data = data[pd.to_datetime(data['Дата']) >= date_from_parsed]
                 except Exception:
                     messagebox.showwarning(
@@ -1582,12 +1592,20 @@ class MedicalAnalysisSystem:
             if date_to:
                 try:
                     date_to_parsed = pd.to_datetime(date_to)
+                    if date_to_parsed > available_max:
+                        msg_parts.append(
+                            f"Конечные данные доступны только до {available_max.date()}"
+                        )
+                        date_to_parsed = available_max
                     data = data[pd.to_datetime(data['Дата']) <= date_to_parsed]
                 except Exception:
                     messagebox.showwarning(
                         "Предупреждение",
                         f"Неверный формат даты 'по': {date_to}. Используйте YYYY-MM-DD")
                     return pd.DataFrame()
+
+            if msg_parts:
+                messagebox.showinfo("Информация", "\n".join(msg_parts))
 
         return data
 
@@ -2539,21 +2557,17 @@ class MedicalAnalysisSystem:
             messagebox.showerror("Ошибка", f"Ошибка при анализе корреляций: {str(e)}")
 
     def analyze_demographic(self):
-        """Анализ взаимосвязи ОРВИ и миграции"""
+        """Анализ взаимосвязи заболеваемости и миграции"""
         try:
             data = self.get_analysis_filtered_data()
             if data is None or len(data) == 0:
                 messagebox.showwarning("Предупреждение", "Нет данных для выбранных фильтров")
                 return
 
-            orvi = data[data.get('Заболевание') == 'ОРВИ'].copy()
-            if orvi.empty:
-                messagebox.showwarning("Предупреждение", "Нет данных по ОРВИ для анализа")
-                return
-            orvi['Дата_dt'] = pd.to_datetime(orvi['Дата'])
-            orvi['year'] = orvi['Дата_dt'].dt.year
-            orvi['month'] = orvi['Дата_dt'].dt.month
-            orvi_month = orvi.groupby(['year', 'month'])['Количество'].sum().reset_index()
+            data['Дата_dt'] = pd.to_datetime(data['Дата'])
+            data['year'] = data['Дата_dt'].dt.year
+            data['month'] = data['Дата_dt'].dt.month
+            cases_month = data.groupby(['year', 'month'])['Количество'].sum().reset_index()
 
             conn = sqlite3.connect(self.db_path)
             try:
@@ -2574,22 +2588,23 @@ class MedicalAnalysisSystem:
                 messagebox.showwarning("Предупреждение", "Нет данных миграции для выбранных фильтров")
                 return
 
-            merged = pd.merge(orvi_month, demo, on=['year', 'month'], how='inner')
+            merged = pd.merge(cases_month, demo, on=['year', 'month'], how='inner')
             merged.sort_values(['year', 'month'], inplace=True)
-            merged['orvi_growth'] = merged['Количество'].pct_change() * 100
+            merged['cases_growth'] = merged['Количество'].pct_change() * 100
             merged['mig_growth'] = merged['migrants'].pct_change() * 100
 
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 7))
-            ax1.plot(merged['month'], merged['Количество'], marker='o', label='ОРВИ')
+            disease_label = self.disease_var.get() if self.disease_var.get() and self.disease_var.get() != 'Все' else 'Все заболевания'
+            ax1.plot(merged['month'], merged['Количество'], marker='o', label=disease_label)
             ax1.plot(merged['month'], merged['migrants'], marker='s', label='Мигранты')
             ax1.set_xticks(merged['month'])
             ax1.set_xlabel('Месяц')
             ax1.set_ylabel('Количество')
-            ax1.set_title('ОРВИ и миграция')
+            ax1.set_title('Заболеваемость и миграция')
             ax1.grid(True, alpha=0.3)
             ax1.legend()
 
-            ax2.bar(merged['month'] - 0.2, merged['orvi_growth'], width=0.4, label='Прирост ОРВИ')
+            ax2.bar(merged['month'] - 0.2, merged['cases_growth'], width=0.4, label='Прирост заболевания')
             ax2.bar(merged['month'] + 0.2, merged['mig_growth'], width=0.4, label='Прирост мигрантов')
             ax2.axhline(0, color='black', linewidth=0.8)
             ax2.set_xticks(merged['month'])
@@ -2619,6 +2634,7 @@ class MedicalAnalysisSystem:
             data['Дата_dt'] = pd.to_datetime(data['Дата'])
             data['month'] = data['Дата_dt'].dt.month
             cases = data.groupby('month')['Количество'].sum()
+            disease_label = self.disease_var.get() if self.disease_var.get() and self.disease_var.get() != 'Все' else 'Все заболевания'
 
             conn = sqlite3.connect(self.db_path)
             try:
@@ -2643,7 +2659,7 @@ class MedicalAnalysisSystem:
             df = pd.concat([cases, weather], axis=1).dropna()
 
             fig, ax1 = plt.subplots(figsize=(10, 5))
-            ax1.plot(df.index, df['Количество'], color='steelblue', marker='o', label='Случаи')
+            ax1.plot(df.index, df['Количество'], color='steelblue', marker='o', label=disease_label)
             ax1.set_xlabel('Месяц')
             ax1.set_ylabel('Количество случаев')
             ax1.grid(True, alpha=0.3)

@@ -43,7 +43,7 @@ class MedicalAnalysisSystem:
         self.analysis_cache = {}
         self.ml_models = {}
         
-        # Создание базы данных
+        # Создание и инициализация базы данных
         self.init_database()
         
         # Создание интерфейса
@@ -57,54 +57,117 @@ class MedicalAnalysisSystem:
         
         # Инициализация моделей ML
         self.init_ml_models()
+
+        # Загрузка данных из базы при старте
+        self.load_data_from_db()
         
     def init_database(self):
-        """Инициализация базы данных SQLite с улучшенной структурой"""
+        """Создание базы данных и заполнение тестовыми данными"""
         self.db_path = "medical_data.db"
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
-        # Создание таблиц
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS analysis_history (
+
+        # Основные таблицы проекта
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS patients_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT,
-                analysis_type TEXT,
-                parameters TEXT,
-                results TEXT,
-                execution_time REAL
+                region TEXT,
+                disease TEXT,
+                count INTEGER,
+                age INTEGER,
+                gender TEXT
             )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS regions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                latitude REAL,
+                longitude REAL
             )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS model_cache (
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS weather_factors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                region TEXT,
+                month INTEGER,
+                avg_temp REAL,
+                precipitation REAL
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS forecast_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 model_name TEXT,
-                model_data BLOB,
-                created_date TEXT,
-                accuracy REAL
+                forecast_date TEXT,
+                region TEXT,
+                disease TEXT,
+                predicted_count INTEGER,
+                actual_count INTEGER
             )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS data_quality_log (
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS report_archive (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                check_date TEXT,
-                issues_found INTEGER,
-                data_size INTEGER,
-                quality_score REAL
+                report_date TEXT,
+                report_type TEXT,
+                content TEXT
             )
-        ''')
-        
+            """
+        )
+
+        conn.commit()
+
+        # Заполнение тестовыми данными при первом запуске
+        cursor.execute("SELECT COUNT(*) FROM regions")
+        if cursor.fetchone()[0] == 0:
+            self._populate_regions(cursor)
+
+        cursor.execute("SELECT COUNT(*) FROM patients_data")
+        if cursor.fetchone()[0] == 0:
+            df = generate_test_data()
+            df.to_sql("patients_data", conn, if_exists="append", index=False)
+
+        cursor.execute("SELECT COUNT(*) FROM weather_factors")
+        if cursor.fetchone()[0] == 0:
+            weather = generate_weather_data()
+            weather.to_sql("weather_factors", conn, if_exists="append", index=False)
+
         conn.commit()
         conn.close()
+
+    def _populate_regions(self, cursor):
+        """Заполнение таблицы regions базовыми данными"""
+        regions = [
+            ("Алматы", 43.2220, 76.8512),
+            ("Астана", 51.1605, 71.4704),
+            ("Караганда", 49.8047, 73.1094),
+            ("Шымкент", 42.3417, 69.5901),
+            ("Актобе", 50.2839, 57.1670),
+            ("Павлодар", 52.2873, 76.9674),
+            ("Тараз", 42.9000, 71.3667),
+            ("Усть-Каменогорск", 49.9480, 82.6176),
+            ("Костанай", 53.2144, 63.6246),
+            ("Атырау", 47.1076, 51.9142),
+        ]
+        cursor.executemany(
+            "INSERT INTO regions(name, latitude, longitude) VALUES (?, ?, ?)",
+            regions,
+        )
         
     def init_ml_models(self):
         """Инициализация различных моделей машинного обучения"""
@@ -512,6 +575,22 @@ class MedicalAnalysisSystem:
                 
             except Exception as e:
                 messagebox.showerror("Ошибка", f"Ошибка при загрузке файла: {str(e)}")
+
+    def load_data_from_db(self):
+        """Загрузка данных из таблицы patients_data"""
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.current_data = pd.read_sql_query(
+                "SELECT date AS 'Дата', region AS 'Регион', disease AS 'Заболевание',"
+                " count AS 'Количество', age AS 'Возраст', gender AS 'Пол' FROM patients_data",
+                conn,
+            )
+        finally:
+            conn.close()
+
+        if not self.current_data.empty:
+            self.update_data_display()
+            self.update_status(f"Загружено {len(self.current_data)} записей из базы данных")
                 
     def update_data_display(self):
         """Обновление отображения данных"""
@@ -967,6 +1046,34 @@ def generate_test_data():
     return pd.DataFrame(data)
 
 
+def generate_weather_data():
+    """Создает тестовые погодные данные по регионам"""
+    np.random.seed(1)
+    regions = [
+        "Алматы",
+        "Астана",
+        "Шымкент",
+        "Караганда",
+        "Актобе",
+        "Павлодар",
+    ]
+
+    months = range(1, 13)
+    data = []
+    for region in regions:
+        base_temps = np.array([-6, -5, 0, 10, 18, 23, 26, 25, 18, 10, 2, -4])
+        base_temps += np.random.normal(0, 1, 12)
+        precipitation = np.random.randint(10, 80, 12)
+        for m in months:
+            data.append({
+                "region": region,
+                "month": m,
+                "avg_temp": float(base_temps[m - 1]),
+                "precipitation": int(precipitation[m - 1]),
+            })
+    return pd.DataFrame(data)
+
+
 def main():
     """Главная функция запуска приложения"""
     root = tk.Tk()
@@ -979,21 +1086,6 @@ def main():
     
     # Создание приложения
     app = MedicalAnalysisSystem(root)
-    
-    # Предложение загрузить тестовые данные
-    response = messagebox.askyesno("Загрузка данных", 
-                                  "Загрузить тестовые данные для демонстрации?")
-    if response:
-        app.current_data = generate_test_data()
-        app.update_data_display()
-        app.update_status("Загружены тестовые данные")
-        messagebox.showinfo("Тестовые данные", 
-                           f"Загружено {len(app.current_data)} записей тестовых данных.\n\n"
-                           "Теперь вы можете:\n"
-                           "• Просматривать данные на вкладке 'Данные'\n"
-                           "• Выполнять анализ на вкладке 'Анализ'\n"
-                           "• Создавать прогнозы на вкладке 'Прогнозы'\n"
-                           "• Проверять качество данных через меню")
     
     # Запуск главного цикла
     root.mainloop()

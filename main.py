@@ -2756,7 +2756,7 @@ class MedicalAnalysisSystem:
             self.update_status("Ошибка при построении прогноза")
 
     def forecast_sarima(self):
-        """Настоящее прогнозирование SARIMA"""
+        """Прогнозирование SARIMA"""
         try:
             # Подготовка данных
             data = self.current_data.copy()

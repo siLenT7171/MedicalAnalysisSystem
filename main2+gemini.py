@@ -1454,7 +1454,8 @@ class MedicalAnalysisSystem:
             disease_filter = self.map_disease.get()
             
             data = self.current_data.copy()
-            region_filter = getattr(self, 'forecast_region_var', None)
+            region_filter_var = getattr(self, 'forecast_region_var', None)
+            region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
             
@@ -2443,7 +2444,8 @@ class MedicalAnalysisSystem:
         try:
             # Подготовка данных
             data = self.current_data.copy()
-            region_filter = getattr(self, 'forecast_region_var', None)
+            region_filter_var = getattr(self, 'forecast_region_var', None)
+            region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
             data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
@@ -2628,7 +2630,8 @@ class MedicalAnalysisSystem:
         try:
             # Подготовка данных
             data = self.current_data.copy()
-            region_filter = getattr(self, 'forecast_region_var', None)
+            region_filter_var = getattr(self, 'forecast_region_var', None)
+            region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
             data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
@@ -2904,7 +2907,8 @@ class MedicalAnalysisSystem:
         try:
             # Подготовка данных
             data = self.current_data.copy()
-            region_filter = getattr(self, 'forecast_region_var', None)
+            region_filter_var = getattr(self, 'forecast_region_var', None)
+            region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
             data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
@@ -3608,7 +3612,8 @@ class MedicalAnalysisSystem:
             try:
                 # Подготовка данных
                 data = self.current_data.copy()
-                region_filter = getattr(self, 'forecast_region_var', None)
+                region_filter_var = getattr(self, 'forecast_region_var', None)
+                region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
                 if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                     data = data[data['Регион'] == region_filter]
                 data['Дата'] = pd.to_datetime(data['Дата'])

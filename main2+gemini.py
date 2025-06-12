@@ -14,6 +14,7 @@ import json
 import os
 import webbrowser
 import tempfile
+from fpdf import FPDF
 import google.generativeai as genai
 import warnings
 warnings.filterwarnings('ignore')
@@ -4214,56 +4215,15 @@ class MedicalAnalysisSystem:
             return
             
         try:
-            # Создаем HTML и открываем для печати в PDF
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <title>Медицинский отчет</title>
-                <style>
-                    body {{ 
-                        font-family: 'Courier New', monospace; 
-                        margin: 20px; 
-                        line-height: 1.4;
-                        font-size: 12px;
-                    }}
-                    h1 {{ color: #2c3e50; text-align: center; }}
-                    pre {{ 
-                        white-space: pre-wrap; 
-                        font-family: 'Courier New', monospace;
-                        background: #f8f9fa;
-                        padding: 15px;
-                        border-radius: 5px;
-                    }}
-                    @media print {{
-                        body {{ margin: 10px; }}
-                        @page {{ margin: 1cm; }}
-                    }}
-                </style>
-            </head>
-            <body>
-                <pre>{content}</pre>
-            </body>
-            </html>
-            """
-            
-            # Сохраняем временный HTML файл
-            temp_html = tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8')
-            temp_html.write(html_content)
-            temp_html.close()
-            
-            # Открываем в браузере для печати в PDF
-            webbrowser.open('file://' + temp_html.name)
-            
-            messagebox.showinfo("Экспорт в PDF", 
-                              f"HTML файл создан и открыт в браузере.\n\n"
-                              f"Для сохранения в PDF:\n"
-                              f"1. Нажмите Ctrl+P (Печать)\n"
-                              f"2. Выберите 'Сохранить как PDF'\n"
-                              f"3. Укажите папку для сохранения\n\n"
-                              f"Временный файл: {os.path.basename(temp_html.name)}")
-            
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.add_font('DejaVu', '', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', uni=True)
+            pdf.set_font('DejaVu', size=12)
+            for line in content.splitlines():
+                pdf.multi_cell(0, 10, txt=line)
+            pdf.output(filename)
+            messagebox.showinfo("Успех", f"PDF отчет сохранен: {os.path.basename(filename)}")
+
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при создании PDF: {str(e)}")
 

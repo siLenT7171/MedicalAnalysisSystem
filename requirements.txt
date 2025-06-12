@@ -9,3 +9,5 @@ scikit-learn
 statsmodels
 tabulate
 xgboost
+fpdf2
+

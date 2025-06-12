@@ -529,6 +529,8 @@ class MedicalAnalysisSystem:
                 self.analysis_date_to.insert(0, "2024-12-31")
             if hasattr(self, 'forecast_region_var'):
                 self.forecast_region_var.set('Все')
+            if hasattr(self, 'forecast_disease_var'):
+                self.forecast_disease_var.set('Все')
             
             # Показываем все данные
             if self.current_data is not None:
@@ -1051,8 +1053,14 @@ class MedicalAnalysisSystem:
         self.forecast_region_combo['values'] = ['Все']
         self.forecast_region_combo.grid(row=0, column=5, padx=5, pady=5, sticky='w')
 
+        ttk.Label(forecast_panel, text="Заболевание:").grid(row=0, column=6, padx=5, pady=5, sticky='w')
+        self.forecast_disease_var = tk.StringVar(value="Все")
+        self.forecast_disease_combo = ttk.Combobox(forecast_panel, textvariable=self.forecast_disease_var, width=20)
+        self.forecast_disease_combo['values'] = ['Все']
+        self.forecast_disease_combo.grid(row=0, column=7, padx=5, pady=5, sticky='w')
+
         ttk.Button(forecast_panel, text="🚀 Построить прогноз",
-                command=self.build_forecast).grid(row=0, column=6, padx=10, pady=5)
+                command=self.build_forecast).grid(row=0, column=8, padx=10, pady=5)
         
         # Область для результатов
         self.forecast_plot_frame = ttk.LabelFrame(self.forecast_frame, text="Результаты прогнозирования")
@@ -1404,6 +1412,10 @@ class MedicalAnalysisSystem:
                     self.disease_combo['values'] = diseases
                     if self.disease_var.get() not in diseases:
                         self.disease_var.set('Все')
+                    if hasattr(self, 'forecast_disease_combo'):
+                        self.forecast_disease_combo['values'] = diseases
+                        if self.forecast_disease_var.get() not in diseases:
+                            self.forecast_disease_var.set('Все')
                         
         except Exception as e:
             print(f"Ошибка при обновлении фильтров: {e}")
@@ -1627,6 +1639,14 @@ class MedicalAnalysisSystem:
             region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
+            disease_filter_var = getattr(self, 'forecast_disease_var', None)
+            disease_filter = disease_filter_var.get() if hasattr(disease_filter_var, 'get') else disease_filter_var
+            if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
+                data = data[data['Заболевание'] == disease_filter]
+            disease_filter_var = getattr(self, 'forecast_disease_var', None)
+            disease_filter = disease_filter_var.get() if hasattr(disease_filter_var, 'get') else disease_filter_var
+            if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
+                data = data[data['Заболевание'] == disease_filter]
             
             # Фильтр по заболеванию
             if disease_filter != 'Все' and 'Заболевание' in data.columns:
@@ -2748,6 +2768,10 @@ class MedicalAnalysisSystem:
             region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
+            disease_filter_var = getattr(self, 'forecast_disease_var', None)
+            disease_filter = disease_filter_var.get() if hasattr(disease_filter_var, 'get') else disease_filter_var
+            if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
+                data = data[data['Заболевание'] == disease_filter]
             data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
             data = data.dropna(subset=['Дата'])
             monthly_data = data.resample('MS', on='Дата')['Количество'].sum()
@@ -2854,7 +2878,7 @@ class MedicalAnalysisSystem:
                     return self.forecast_sarima()  # Рекурсивно с STATSMODELS_AVAILABLE = False
             
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
+            fig, ax1 = plt.subplots(figsize=(12, 7))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 
@@ -2934,6 +2958,10 @@ class MedicalAnalysisSystem:
             region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
             if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                 data = data[data['Регион'] == region_filter]
+            disease_filter_var = getattr(self, 'forecast_disease_var', None)
+            disease_filter = disease_filter_var.get() if hasattr(disease_filter_var, 'get') else disease_filter_var
+            if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
+                data = data[data['Заболевание'] == disease_filter]
             data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
             data = data.dropna(subset=['Дата'])
 
@@ -3337,7 +3365,15 @@ class MedicalAnalysisSystem:
         try:
             # Подготовка данных
             data = self.current_data.copy()
-            
+            region_filter_var = getattr(self, 'forecast_region_var', None)
+            region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
+            if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
+                data = data[data['Регион'] == region_filter]
+            disease_filter_var = getattr(self, 'forecast_disease_var', None)
+            disease_filter = disease_filter_var.get() if hasattr(disease_filter_var, 'get') else disease_filter_var
+            if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
+                data = data[data['Заболевание'] == disease_filter]
+
             # Преобразование дат
             try:
                 data['Дата'] = pd.to_datetime(data['Дата'], errors='coerce')
@@ -3475,7 +3511,7 @@ class MedicalAnalysisSystem:
             plt.rcParams['axes.unicode_minus'] = False
             
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
+            fig, ax1 = plt.subplots(figsize=(12, 7))
             
             # График 1: Прогноз
             # Создание исторических дат
@@ -3542,13 +3578,6 @@ class MedicalAnalysisSystem:
             ax1.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
             ax1.set_facecolor('#FAFAFA')
             
-            # График 2: Важность признаков Random Forest
-            self._plot_feature_importance_enhanced(ax2, model)
-
-            # Настройки внешнего вида второго графика
-            ax2.set_facecolor('#FAFAFA')
-            ax2.tick_params(axis='both', which='major', labelsize=10)
-            
             # Общее улучшение дизайна
             plt.tight_layout(pad=3.0)
             
@@ -3558,14 +3587,12 @@ class MedicalAnalysisSystem:
             canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
             
             # Сохранение результатов
-            feature_names = ['Период', 'Месяц', 'Лаг 1', 'Лаг 2', 'Скольз. ср.', 'Сезон sin', 'Сезон cos']
             self.forecast_results = {
                 'dates': forecast_dates,
                 'values': forecast_values,
                 'model': 'Random Forest',
                 'mae': mae,
-                'r2': r2,
-                'feature_importance': dict(zip(feature_names, model.feature_importances_))
+                'r2': r2
             }
             
             self.update_status(f"ML прогноз построен на {periods} месяцев (MAE: {mae:.1f}, R²: {r2:.3f})")
@@ -3662,6 +3689,10 @@ class MedicalAnalysisSystem:
                 region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
                 if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
                     data = data[data['Регион'] == region_filter]
+                disease_filter_var = getattr(self, 'forecast_disease_var', None)
+                disease_filter = disease_filter_var.get() if hasattr(disease_filter_var, 'get') else disease_filter_var
+                if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
+                    data = data[data['Заболевание'] == disease_filter]
                 data['Дата'] = pd.to_datetime(data['Дата'])
                 monthly_data = data.groupby(pd.Grouper(key='Дата', freq='M'))['Количество'].sum()
                 monthly_data = monthly_data[monthly_data > 0]

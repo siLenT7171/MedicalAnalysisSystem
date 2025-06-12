@@ -1527,7 +1527,7 @@ class MedicalAnalysisSystem:
         """Построение карты плотности (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
         try:
             # Создание scatter plot для имитации плотности
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
             
             # Подготовка данных
             data = self.current_data.copy()
@@ -1634,7 +1634,7 @@ class MedicalAnalysisSystem:
         """Построение временной карты (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
         try:
             # Создание временной карты
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # Подготовка данных по годам
             data = self.current_data.copy()
@@ -1844,7 +1844,7 @@ class MedicalAnalysisSystem:
         """Анализ сезонности заболеваний"""
         try:
             # Создание фигуры с множественными графиками
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 8))
             
             # Подготовка данных
             data = self.get_analysis_filtered_data()
@@ -1934,7 +1934,7 @@ class MedicalAnalysisSystem:
         """Анализ заболеваемости по регионам"""
         try:
             # Создание фигуры
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 10))
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 8))
             
             # Подготовка данных
             data = self.get_analysis_filtered_data()
@@ -2028,7 +2028,7 @@ class MedicalAnalysisSystem:
                 return
             
             # Создание фигуры
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 8))
             
             # Подготовка данных
             data = self.get_analysis_filtered_data()
@@ -2117,7 +2117,7 @@ class MedicalAnalysisSystem:
         """Анализ корреляций между факторами"""
         try:
             # Создание фигуры
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 8))
             
             # Подготовка данных для корреляционной матрицы
             data = self.get_analysis_filtered_data()
@@ -2616,7 +2616,7 @@ class MedicalAnalysisSystem:
             plt.rcParams['axes.unicode_minus'] = False
             
             # Создание улучшенной визуализации
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # График 1: Прогноз (более чистый дизайн)
             try:
@@ -3023,7 +3023,7 @@ class MedicalAnalysisSystem:
             plt.rcParams['axes.unicode_minus'] = False
             
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # График 1: Прогноз
             # ИСПРАВЛЕНИЕ: Безопасное создание исторических дат

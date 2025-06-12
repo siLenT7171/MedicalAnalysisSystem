@@ -1704,7 +1704,7 @@ class MedicalAnalysisSystem:
         """Построение временной карты (ИСПРАВЛЕННАЯ ВЕРСИЯ)"""
         try:
             # Создание временной карты
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # Подготовка данных по годам
             data = self.current_data.copy()
@@ -2554,7 +2554,7 @@ class MedicalAnalysisSystem:
                     return self.forecast_sarima()  # Рекурсивно с STATSMODELS_AVAILABLE = False
             
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 
@@ -2762,7 +2762,7 @@ class MedicalAnalysisSystem:
             plt.rcParams['axes.unicode_minus'] = False
             
             # Создание улучшенной визуализации
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # График 1: Прогноз (более чистый дизайн)
             try:
@@ -2970,7 +2970,7 @@ class MedicalAnalysisSystem:
                                         periods=periods, freq='M')
             
             # График
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 
@@ -3175,7 +3175,7 @@ class MedicalAnalysisSystem:
             plt.rcParams['axes.unicode_minus'] = False
             
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
             
             # График 1: Прогноз
             # ИСПРАВЛЕНИЕ: Безопасное создание исторических дат
@@ -3242,266 +3242,12 @@ class MedicalAnalysisSystem:
             ax1.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
             ax1.set_facecolor('#FAFAFA')
             
-            # График 2: Уникальный анализ для Random Forest (отличается от XGBoost)
-            if len(X_test) > 0 and len(y_test) > 0:
-                # Вариант A: Матрица ошибок и распределение остатков (УНИКАЛЬНЫЙ ДЛЯ RF)
-                residuals = y_pred - y_test
-                
-                # Создаем subplot в subplot для более детального анализа
-                from matplotlib.gridspec import GridSpec
-                gs = GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.45, bottom=0.05, 
-                            wspace=0.3, hspace=0.4)
-                
-                # Убираем старый ax2 и создаем новые
-                ax2.remove()
-                
-                # Подграфик 1: Гистограмма остатков
-                ax2_1 = fig.add_subplot(gs[0, 0])
-                n, bins, patches = ax2_1.hist(residuals, bins=15, alpha=0.7, color='skyblue', 
-                                            edgecolor='black', density=True)
-                
-                # Добавляем нормальное распределение для сравнения
-                mu, sigma = np.mean(residuals), np.std(residuals)
-                x_norm = np.linspace(residuals.min(), residuals.max(), 100)
-                y_norm = ((1/(sigma * np.sqrt(2 * np.pi))) * 
-                        np.exp(-0.5 * ((x_norm - mu) / sigma) ** 2))
-                ax2_1.plot(x_norm, y_norm, 'r-', linewidth=2, label='Норм. распр.')
-                ax2_1.axvline(x=0, color='green', linestyle='--', alpha=0.8, linewidth=2)
-                ax2_1.set_title('🔔 Распределение остатков', fontsize=12, fontweight='bold')
-                ax2_1.set_xlabel('Остатки')
-                ax2_1.set_ylabel('Плотность')
-                ax2_1.legend()
-                ax2_1.grid(True, alpha=0.3)
-                
-                # Подграфик 2: Q-Q plot для проверки нормальности
-                ax2_2 = fig.add_subplot(gs[0, 1])
-                from scipy import stats
-                stats.probplot(residuals, dist="norm", plot=ax2_2)
-                ax2_2.set_title('📈 Q-Q график нормальности', fontsize=12, fontweight='bold')
-                ax2_2.grid(True, alpha=0.3)
-                
-                # Подграфик 3: Остатки vs предсказанные значения
-                ax2_3 = fig.add_subplot(gs[1, 0])
-                ax2_3.scatter(y_pred, residuals, alpha=0.6, color='coral', s=60, edgecolor='white')
-                ax2_3.axhline(y=0, color='red', linestyle='--', alpha=0.8, linewidth=2)
-                
-                # Добавляем LOWESS сглаживание для выявления паттернов
-                try:
-                    from statsmodels.nonparametric.smoothers_lowess import lowess
-                    smoothed = lowess(residuals, y_pred, frac=0.3)
-                    ax2_3.plot(smoothed[:, 0], smoothed[:, 1], color='blue', linewidth=3, alpha=0.8)
-                except:
-                    # Если statsmodels недоступен, используем полиномиальное сглаживание
-                    z = np.polyfit(y_pred, residuals, 2)
-                    p = np.poly1d(z)
-                    x_smooth = np.linspace(y_pred.min(), y_pred.max(), 100)
-                    ax2_3.plot(x_smooth, p(x_smooth), color='blue', linewidth=3, alpha=0.8)
-                
-                ax2_3.set_title('🎯 Остатки vs Предсказания', fontsize=12, fontweight='bold')
-                ax2_3.set_xlabel('Предсказанные значения')
-                ax2_3.set_ylabel('Остатки')
-                ax2_3.grid(True, alpha=0.3)
-                
-                # Подграфик 4: Круговая диаграмма качества предсказаний
-                ax2_4 = fig.add_subplot(gs[1, 1])
-                
-                # Классификация качества предсказаний
-                abs_errors = np.abs(residuals)
-                error_threshold_low = np.percentile(abs_errors, 33)
-                error_threshold_high = np.percentile(abs_errors, 67)
-                
-                excellent = np.sum(abs_errors <= error_threshold_low)
-                good = np.sum((abs_errors > error_threshold_low) & (abs_errors <= error_threshold_high))
-                poor = np.sum(abs_errors > error_threshold_high)
-                
-                sizes = [excellent, good, poor]
-                labels = ['Отличные\n(≤33%)', 'Хорошие\n(33-67%)', 'Слабые\n(≥67%)']
-                colors = ['#2ECC71', '#F39C12', '#E74C3C']
-                explode = (0.05, 0.05, 0.1)
-                
-                wedges, texts, autotexts = ax2_4.pie(sizes, labels=labels, colors=colors, 
-                                                    explode=explode, autopct='%1.1f%%', 
-                                                    startangle=90, shadow=True)
-                
-                for autotext in autotexts:
-                    autotext.set_color('white')
-                    autotext.set_fontweight('bold')
-                    autotext.set_fontsize(9)
-                
-                ax2_4.set_title('🏆 Качество предсказаний', fontsize=12, fontweight='bold')
-                
-                # Общая статистика внизу
-                overall_stats = f'📊 ОБЩАЯ СТАТИСТИКА МОДЕЛИ:\n' \
-                            f'R² = {r2:.3f} | MAE = {mae:.1f} | RMSE = {np.sqrt(np.mean(residuals**2)):.1f}\n' \
-                            f'Среднее остатков: {np.mean(residuals):.2f} | Медиана: {np.median(residuals):.2f}'
-                
-                fig.text(0.5, 0.02, overall_stats, ha='center', va='bottom', fontsize=11, 
-                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightcyan', alpha=0.8))
+            # График 2: Важность признаков Random Forest
+            self._plot_feature_importance_enhanced(ax2, model)
 
-            elif len(monthly_data) >= 12:
-                # Вариант B: Анализ важности деревьев Random Forest (УНИКАЛЬНЫЙ)
-                ax2.clear()
-                
-                # Получаем важность признаков из индивидуальных деревьев
-                n_trees_to_show = min(10, model.n_estimators)
-                individual_importances = []
-                
-                for i in range(n_trees_to_show):
-                    tree_importance = model.estimators_[i].feature_importances_
-                    individual_importances.append(tree_importance)
-                
-                individual_importances = np.array(individual_importances)
-                feature_names = ['Период', 'Месяц', 'Лаг 1', 'Лаг 2', 'Скольз. ср.', 'Сезон sin', 'Сезон cos']
-                
-                # Создаем violin plot для показа разброса важности по деревьям
-                positions = range(len(feature_names))
-                violin_data = [individual_importances[:, i] for i in range(len(feature_names))]
-                
-                violin_parts = ax2.violinplot(violin_data, positions=positions, 
-                                            showmeans=True, showmedians=True, showextrema=True)
-                
-                # Красим violin plots в разные цвета
-                colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8']
-                for pc, color in zip(violin_parts['bodies'], colors):
-                    pc.set_facecolor(color)
-                    pc.set_alpha(0.7)
-                    pc.set_edgecolor('black')
-                
-                # Добавляем средние значения как точки
-                means = [np.mean(data) for data in violin_data]
-                ax2.scatter(positions, means, color='red', s=100, zorder=3, 
-                        marker='D', edgecolor='white', linewidth=2, label='Среднее')
-                
-                # Добавляем значения на график
-                for i, (pos, mean_val) in enumerate(zip(positions, means)):
-                    ax2.text(pos, mean_val + max(means)*0.02, f'{mean_val:.3f}', 
-                            ha='center', va='bottom', fontweight='bold', fontsize=9)
-                
-                ax2.set_xticks(positions)
-                ax2.set_xticklabels(feature_names, rotation=45, ha='right')
-                ax2.set_ylabel('Важность признака в деревьях', fontsize=12, fontweight='bold')
-                ax2.set_title(f'🌲 Разброс важности признаков по {n_trees_to_show} деревьям RF', 
-                            fontsize=14, fontweight='bold')
-                ax2.grid(True, alpha=0.3, axis='y')
-                ax2.legend()
-                
-                # Добавляем статистику разброса
-                stability_scores = [np.std(data) for data in violin_data]
-                most_stable = feature_names[np.argmin(stability_scores)]
-                most_variable = feature_names[np.argmax(stability_scores)]
-                
-                stats_text = f'Стабильность признаков:\n' \
-                            f'Самый стабильный: {most_stable}\n' \
-                            f'Самый изменчивый: {most_variable}\n' \
-                            f'Деревьев проанализировано: {n_trees_to_show}'
-                
-                ax2.text(0.02, 0.98, stats_text, transform=ax2.transAxes, fontsize=10,
-                        verticalalignment='top', horizontalalignment='left',
-                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8))
-            else:
-                # Вариант C: Дерево решений - визуализация структуры одного дерева (УНИКАЛЬНЫЙ)
-                ax2.clear()
-                
-                # Выбираем одно из лучших деревьев для визуализации
-                tree_idx = 0  # Можно выбрать случайное или лучшее дерево
-                tree = model.estimators_[tree_idx]
-                
-                # Создаем упрощенную визуализацию дерева
-                from matplotlib.patches import Rectangle, FancyBboxPatch
-                
-                # Получаем информацию о дереве
-                n_nodes = tree.tree_.node_count
-                children_left = tree.tree_.children_left
-                children_right = tree.tree_.children_right
-                feature = tree.tree_.feature
-                threshold = tree.tree_.threshold
-                
-                # Ограничиваем глубину для читаемости
-                max_depth_to_show = 3
-                feature_names = ['Период', 'Месяц', 'Лаг 1', 'Лаг 2', 'Скольз. ср.', 'Сезон sin', 'Сезон cos']
-                
-                # Функция для рекурсивного рисования узлов
-                def draw_tree_recursive(node_id, x, y, width, depth):
-                    if depth > max_depth_to_show or node_id == -1:
-                        return
-                    
-                    # Цвет узла в зависимости от глубины
-                    colors = ['lightblue', 'lightgreen', 'lightyellow', 'lightcoral']
-                    color = colors[min(depth, len(colors)-1)]
-                    
-                    # Рисуем узел
-                    if children_left[node_id] != children_right[node_id]:  # Не листовой узел
-                        # Условие разбиения
-                        if feature[node_id] < len(feature_names):
-                            label = f'{feature_names[feature[node_id]]}\n≤ {threshold[node_id]:.2f}'
-                        else:
-                            label = f'Feature {feature[node_id]}\n≤ {threshold[node_id]:.2f}'
-                        
-                        box = FancyBboxPatch((x-width/2, y-0.05), width, 0.1, 
-                                        boxstyle="round,pad=0.01", 
-                                        facecolor=color, edgecolor='black', linewidth=1)
-                        ax2.add_patch(box)
-                        ax2.text(x, y, label, ha='center', va='center', fontsize=8, fontweight='bold')
-                        
-                        # Рисуем линии к дочерним узлам
-                        left_x = x - width/2
-                        right_x = x + width/2
-                        child_y = y - 0.2
-                        
-                        ax2.plot([x, left_x], [y-0.05, child_y+0.05], 'k-', linewidth=1)
-                        ax2.plot([x, right_x], [y-0.05, child_y+0.05], 'k-', linewidth=1)
-                        
-                        # Рекурсивно рисуем дочерние узлы
-                        draw_tree_recursive(children_left[node_id], left_x, child_y, width/2, depth+1)
-                        draw_tree_recursive(children_right[node_id], right_x, child_y, width/2, depth+1)
-                    else:
-                        # Листовой узел
-                        box = FancyBboxPatch((x-width/4, y-0.03), width/2, 0.06, 
-                                        boxstyle="round,pad=0.01", 
-                                        facecolor='lightpink', edgecolor='black', linewidth=1)
-                        ax2.add_patch(box)
-                        ax2.text(x, y, 'Лист', ha='center', va='center', fontsize=7)
-                
-                # Начинаем рисование с корня
-                draw_tree_recursive(0, 0.5, 0.9, 0.8, 0)
-                
-                ax2.set_xlim(0, 1)
-                ax2.set_ylim(0, 1)
-                ax2.set_aspect('equal')
-                ax2.axis('off')
-                ax2.set_title(f'🌳 Структура дерева #{tree_idx+1} (глубина ≤{max_depth_to_show})', 
-                            fontsize=14, fontweight='bold', pad=20)
-                
-                # Добавляем легенду важности признаков
-                feature_importance = model.feature_importances_
-                importance_text = "🏆 Общая важность признаков:\n"
-                sorted_features = sorted(zip(feature_names, feature_importance), 
-                                    key=lambda x: x[1], reverse=True)
-                
-                for i, (fname, importance) in enumerate(sorted_features[:5]):
-                    importance_text += f"{i+1}. {fname}: {importance:.3f}\n"
-                
-                ax2.text(0.02, 0.4, importance_text, transform=ax2.transAxes, fontsize=10,
-                        verticalalignment='top', horizontalalignment='left',
-                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lavender', alpha=0.8))
-                
-                # Информация о модели
-                model_info = f"📊 Информация о RF:\n" \
-                            f"Всего деревьев: {model.n_estimators}\n" \
-                            f"Макс. глубина: {model.max_depth}\n" \
-                            f"Мин. образцов в листе: {model.min_samples_leaf}\n" \
-                            f"Случайных признаков: {model.max_features}"
-                
-                ax2.text(0.98, 0.4, model_info, transform=ax2.transAxes, fontsize=10,
-                        verticalalignment='top', horizontalalignment='right',
-                        bbox=dict(boxstyle='round,pad=0.5', facecolor='lightcyan', alpha=0.8))
-            
-            # Общие улучшения для второго графика
-            try:
-                ax2.set_facecolor('#FAFAFA')
-                ax2.tick_params(axis='both', which='major', labelsize=10)
-            except:
-                pass  # Может быть удален в варианте A
+            # Настройки внешнего вида второго графика
+            ax2.set_facecolor('#FAFAFA')
+            ax2.tick_params(axis='both', which='major', labelsize=10)
             
             # Общее улучшение дизайна
             plt.tight_layout(pad=3.0)

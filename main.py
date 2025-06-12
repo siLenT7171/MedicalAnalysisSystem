@@ -19,6 +19,9 @@ import google.generativeai as genai
 import warnings
 warnings.filterwarnings('ignore')
 
+# Базовая директория проекта
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Проверка scikit-learn
 try:
     from sklearn.model_selection import train_test_split
@@ -88,7 +91,7 @@ class MedicalAnalysisSystem:
     def init_database(self):
         """Создание базы данных и заполнение тестовыми данными"""
         try:
-            self.db_path = "medical_data.db"
+            self.db_path = os.path.join(BASE_DIR, "medical_data.db")
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
@@ -211,7 +214,8 @@ class MedicalAnalysisSystem:
     def _populate_regions(self, cursor):
         """Заполнение таблицы regions начальными данными"""
         try:
-            with open('kazakhstan_regions.json', 'r', encoding='utf-8') as f:
+            regions_path = os.path.join(BASE_DIR, 'kazakhstan_regions.json')
+            with open(regions_path, 'r', encoding='utf-8') as f:
                 regions = json.load(f)['regions']
             rows = [(name, data['lat'], data['lon']) for name, data in regions.items()]
             cursor.executemany(
@@ -224,7 +228,7 @@ class MedicalAnalysisSystem:
     def _populate_demographics(self, cursor):
         """Загрузка данных миграции из файла"""
         try:
-            file_path = os.path.join('data', 'Внутренняя миграция.xlsx')
+            file_path = os.path.join(BASE_DIR, 'data', 'Внутренняя миграция.xlsx')
             if not os.path.exists(file_path):
                 print('Файл миграции не найден')
                 return
@@ -2596,8 +2600,8 @@ class MedicalAnalysisSystem:
                 params = []
                 region_filter = self.analysis_region_var.get()
                 if region_filter and region_filter != 'Все':
-                    cond.append("region = ?")
-                    params.append(region_filter)
+                    cond.append("region LIKE ?")
+                    params.append(f"%{region_filter}%")
                 if cond:
                     query += " WHERE " + " AND ".join(cond)
                 demo = pd.read_sql_query(query, conn, params=params)

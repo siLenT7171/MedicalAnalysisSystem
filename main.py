@@ -3032,7 +3032,7 @@ class MedicalAnalysisSystem:
                     r2 = None
 
             # Создание графика
-            fig, ax1 = plt.subplots(1, 1, figsize=(12, 7))
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 7))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 

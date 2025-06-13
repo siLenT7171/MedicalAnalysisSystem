@@ -616,7 +616,6 @@ class MedicalAnalysisSystem:
         self.map_type = tk.StringVar(value="regional")
         map_types = [
             ("По регионам", "regional"),
-            ("Плотность населения", "density"),
             ("Временная динамика", "temporal")
         ]
         
@@ -1673,8 +1672,6 @@ class MedicalAnalysisSystem:
             
             if map_type == "regional":
                 self.build_regional_map()
-            elif map_type == "density":
-                self.build_density_map()
             elif map_type == "temporal":
                 self.build_temporal_map()
                 
@@ -1837,118 +1834,11 @@ class MedicalAnalysisSystem:
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при построении региональной карты: {str(e)}")
         
-    def build_density_map(self):
-        """Построение карты плотности"""
-        try:
-            # Создание scatter plot для имитации плотности
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
-            
-            # Подготовка данных
-            data = self.current_data.copy()
-            period = self.map_period.get()
-            disease_filter = self.map_disease.get()
-            
-            # Применяем фильтры
-            if disease_filter != 'Все' and 'Заболевание' in data.columns:
-                data = data[data['Заболевание'] == disease_filter]
-            
-            if period != 'Все годы':
-                try:
-                    data['Год'] = pd.to_datetime(data['Дата']).dt.year
-                    data = data[data['Год'] == int(period)]
-                except:
-                    pass
-            
-            regional_data = data.groupby('Регион').agg({
-                'Количество': 'sum'
-            }).reset_index()
-            
-            if len(regional_data) == 0:
-                messagebox.showwarning("Предупреждение", "Нет данных для построения карты плотности")
-                return
-            
-            # Добавляем средний возраст если есть колонка Возраст
-            if 'Возраст' in data.columns:
-                avg_age = data.groupby('Регион')['Возраст'].mean()
-                regional_data = regional_data.merge(avg_age.reset_index(), on='Регион', how='left')
-                color_data = regional_data['Возраст'].fillna(regional_data['Возраст'].mean())
-                color_label = 'Средний возраст'
-            else:
-                color_data = regional_data['Количество']
-                color_label = 'Количество случаев'
-            
-            # График 1: Scatter plot с координатами
-            # Создание условных координат для регионов
-            np.random.seed(42)
-            x_coords = np.random.uniform(0, 10, len(regional_data))
-            y_coords = np.random.uniform(0, 10, len(regional_data))
-            
-            # Размер точек пропорционален количеству случаев
-            max_cases = regional_data['Количество'].max()
-            sizes = (regional_data['Количество'] / max_cases * 800) + 100
-            
-            scatter = ax1.scatter(x_coords, y_coords, 
-                            s=sizes, 
-                            c=color_data, 
-                            cmap='viridis', alpha=0.7, edgecolors='black', linewidth=1)
-            
-            # Подписи регионов
-            for i, region in enumerate(regional_data['Регион']):
-                ax1.annotate(region, (x_coords[i], y_coords[i]), 
-                        xytext=(5, 5), textcoords='offset points', fontsize=8,
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-            
-            ax1.set_xlabel('Условная долгота')
-            ax1.set_ylabel('Условная широта')
-            ax1.set_title(f'Карта плотности заболеваемости\n({period}, {disease_filter})\nРазмер = количество случаев')
-            ax1.grid(True, alpha=0.3)
-            
-            # Цветовая шкала
-            plt.colorbar(scatter, ax=ax1, label=color_label)
-            
-            # График 2: Гистограмма распределения
-            ax2.hist(regional_data['Количество'], bins=min(10, len(regional_data)), 
-                    color='skyblue', alpha=0.7, edgecolor='black')
-            ax2.set_xlabel('Количество случаев')
-            ax2.set_ylabel('Количество регионов')
-            ax2.set_title(f'Распределение плотности\nпо регионам ({period})')
-            ax2.grid(True, alpha=0.3)
-            
-            plt.tight_layout()
-            
-            # Встраивание графика
-            canvas = FigureCanvasTkAgg(fig, master=self.map_plot_frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-            
-            # Статистика
-            stats_text = f"""КАРТА ПЛОТНОСТИ ({period})
-══════════════════════════════════════
-Заболевание: {disease_filter}
-Регионов: {len(regional_data)}
-Общее количество случаев: {regional_data['Количество'].sum():,}
-
-📊 Распределение плотности:
-• Максимальная: {regional_data['Количество'].max():,}
-• Минимальная: {regional_data['Количество'].min():,}
-• Средняя: {regional_data['Количество'].mean():,.1f}
-• Медиана: {regional_data['Количество'].median():,.1f}
-
-🎯 Коэффициент вариации: {(regional_data['Количество'].std() / regional_data['Количество'].mean() * 100):,.1f}%"""
-            
-            self.map_stats_text.delete(1.0, tk.END)
-            self.map_stats_text.insert(1.0, stats_text)
-            
-            self.update_status(f"Карта плотности построена для {period}")
-            
-        except Exception as e:
-            messagebox.showerror("Ошибка", f"Ошибка при построении карты плотности: {str(e)}")
-
     def build_temporal_map(self):
         """Построение временной карты"""
         try:
             # Создание временной карты
-            fig, ax1 = plt.subplots(1, 1, figsize=(12, 7))
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
             
             # Подготовка данных по годам
             data = self.current_data.copy()

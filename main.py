@@ -1913,7 +1913,7 @@ class MedicalAnalysisSystem:
         """Построение временной карты"""
         try:
             # Создание временной карты
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
+            fig, ax1 = plt.subplots(1, 1, figsize=(12, 7))
             
             # Подготовка данных по годам
             data = self.current_data.copy()
@@ -2942,7 +2942,7 @@ class MedicalAnalysisSystem:
                     r2 = None
 
             # Создание графика
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
+            fig, ax1 = plt.subplots(1, 1, figsize=(12, 7))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 
@@ -3311,7 +3311,7 @@ class MedicalAnalysisSystem:
                                         periods=periods, freq='M')
             
             # График
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
+            fig, ax1 = plt.subplots(1, 1, figsize=(12, 7))
             
             # График 1: Прогноз
             ax1.plot(monthly_data.index, monthly_data.values, 
@@ -3338,20 +3338,6 @@ class MedicalAnalysisSystem:
             ax1.legend()
             ax1.grid(True, alpha=0.3)
             
-            # График 2: Остатки модели
-            residuals = y - y_fitted
-            ax2.scatter(range(len(residuals)), residuals, alpha=0.6, color='gray')
-            ax2.axhline(y=0, color='red', linestyle='--', alpha=0.8)
-            ax2.set_xlabel('Индекс наблюдения', fontsize=12, fontweight='bold')
-            ax2.set_ylabel('Остатки', fontsize=12, fontweight='bold')
-            ax2.set_title('Анализ остатков модели', fontsize=14, fontweight='bold')
-            ax2.grid(True, alpha=0.3)
-            
-            # Добавляем линию тренда остатков
-            residual_trend = np.polyfit(range(len(residuals)), residuals, 1)
-            ax2.plot(range(len(residuals)), np.poly1d(residual_trend)(range(len(residuals))), 
-                    color='orange', linestyle='--', alpha=0.7, label='Тренд остатков')
-            ax2.legend()
             
             plt.tight_layout()
             
@@ -3366,8 +3352,7 @@ class MedicalAnalysisSystem:
                 'values': forecast_values,
                 'model': 'Linear Regression',
                 'mae': mae,
-                'r2': r2,
-                'residuals_std': np.std(residuals)
+                'r2': r2
             }
             
             self.update_status(f"Прогноз Linear Regression построен на {periods} месяцев (MAE: {mae:.1f}, R²: {r2:.3f})")

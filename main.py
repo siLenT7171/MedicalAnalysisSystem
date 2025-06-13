@@ -145,6 +145,16 @@ class MedicalAnalysisSystem:
 
             cursor.execute(
                 """
+                CREATE TABLE IF NOT EXISTS economic_indicators (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    region TEXT,
+                    avg_income REAL
+                )
+                """
+            )
+
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS forecast_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     model_name TEXT,
@@ -201,6 +211,10 @@ class MedicalAnalysisSystem:
             if cursor.fetchone()[0] == 0:
                 self._populate_demographics(cursor)
 
+            cursor.execute("SELECT COUNT(*) FROM economic_indicators")
+            if cursor.fetchone()[0] == 0:
+                self._populate_economic(cursor)
+
             conn.commit()
             conn.close()
 
@@ -249,6 +263,29 @@ class MedicalAnalysisSystem:
             )
         except Exception as e:
             print(f"Не удалось заполнить demographics: {e}")
+
+    def _populate_economic(self, cursor):
+        """Заполнение таблицы экономических показателей"""
+        try:
+            incomes = {
+                'Алматы': 350000,
+                'Астана': 340000,
+                'Караганда': 250000,
+                'Шымкент': 230000,
+                'Актобе': 240000,
+                'Павлодар': 235000,
+                'Жамбыл': 210000,
+                'ВКО': 220000,
+                'Костанай': 230000,
+                'Атырау': 370000
+            }
+            records = [(region, income) for region, income in incomes.items()]
+            cursor.executemany(
+                "INSERT INTO economic_indicators(region, avg_income) VALUES (?, ?)",
+                records,
+            )
+        except Exception as e:
+            print(f"Не удалось заполнить economic_indicators: {e}")
 
     def load_regions_from_db(self):
         """Загрузка координат регионов из базы"""
@@ -723,7 +760,8 @@ class MedicalAnalysisSystem:
             ("По возрастам", "age_groups"),
             ("Корреляция", "correlation"),
             ("Демография", "demographic"),
-            ("Погода", "weather")
+            ("Погода", "weather"),
+            ("Экономика", "economic")
         ]
         
         col = 1
@@ -2125,6 +2163,8 @@ class MedicalAnalysisSystem:
                 self.analyze_demographic()
             elif analysis_type == "weather":
                 self.analyze_weather_cases()
+            elif analysis_type == "economic":
+                self.analyze_economic()
                 
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при выполнении анализа: {str(e)}")
@@ -2709,6 +2749,59 @@ class MedicalAnalysisSystem:
             self.analysis_canvas = canvas
         except Exception as e:
             messagebox.showerror('Ошибка', f'Ошибка анализа погоды: {str(e)}')
+
+    def analyze_economic(self):
+        """Анализ связи заболеваемости и уровня дохода"""
+        try:
+            data = self.get_analysis_filtered_data()
+            if data is None or len(data) == 0:
+                messagebox.showwarning('Предупреждение', 'Нет данных для выбранных фильтров')
+                return
+
+            cases = data.groupby('Регион')['Количество'].sum().reset_index()
+            conn = sqlite3.connect(self.db_path)
+            try:
+                econ = pd.read_sql_query('SELECT region, avg_income FROM economic_indicators', conn)
+            finally:
+                conn.close()
+
+            df = pd.merge(cases, econ, left_on='Регион', right_on='region')
+            if df.empty:
+                messagebox.showwarning('Предупреждение', 'Нет экономических данных для анализа')
+                return
+
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 5))
+
+            df_sorted = df.sort_values('Количество', ascending=False)
+            bars = ax1.bar(df_sorted['Регион'], df_sorted['Количество'], color='skyblue')
+            ax1.set_xticklabels(df_sorted['Регион'], rotation=45, ha='right')
+            ax1.set_ylabel('Количество случаев')
+            ax1.set_title('Заболеваемость по регионам')
+            ax1.grid(True, axis='y', alpha=0.3)
+
+            ax_income = ax1.twinx()
+            ax_income.plot(df_sorted['Регион'], df_sorted['avg_income'], color='orange', marker='o', label='Доход')
+            ax_income.set_ylabel('Средний доход')
+            ax_income.legend(loc='upper right')
+
+            ax2.scatter(df['avg_income'], df['Количество'], color='green')
+            if len(df) > 1:
+                m, b = np.polyfit(df['avg_income'], df['Количество'], 1)
+                ax2.plot(df['avg_income'], m*df['avg_income']+b, color='red', linestyle='--')
+            ax2.set_xlabel('Средний доход')
+            ax2.set_ylabel('Количество случаев')
+            ax2.set_title('Доход vs Заболеваемость')
+            ax2.grid(True, alpha=0.3)
+
+            plt.tight_layout()
+            canvas = FigureCanvasTkAgg(fig, master=self.analysis_plot_frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+            self.update_status('Экономический анализ выполнен успешно')
+            self.analysis_canvas = canvas
+        except Exception as e:
+            messagebox.showerror('Ошибка', f'Ошибка экономического анализа: {str(e)}')
                     
     def build_forecast(self):
         """Построение прогноза заболеваемости"""

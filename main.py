@@ -2948,12 +2948,17 @@ class MedicalAnalysisSystem:
             ax1.plot(forecast_dates, forecast_values, 
                     label=f'Прогноз', color='red', marker='s', linestyle='--', linewidth=2)
             
-            ax1.set_xlabel('Дата')
-            ax1.set_ylabel('Количество случаев')
+            ax1.set_xlabel('Период', fontsize=12, fontweight='bold')
+            ax1.set_ylabel('Количество случаев', fontsize=12, fontweight='bold')
             metrics_text = ''
             if mae is not None and r2 is not None:
-                metrics_text = f"MAE: {mae:.1f}, R²: {r2:.3f}"
-            ax1.set_title(f'SARIMA прогноз на {periods} месяцев\n{metrics_text}', fontsize=14)
+                metrics_text = f"Точность: R² = {r2:.3f} | Ошибка: MAE = {mae:.1f}"
+            ax1.set_title(
+                f'SARIMA прогноз на {periods} месяцев\n{metrics_text}',
+                fontsize=14,
+                fontweight='bold',
+                pad=20,
+            )
             ax1.legend()
             ax1.grid(True, alpha=0.3)
             
@@ -2966,9 +2971,9 @@ class MedicalAnalysisSystem:
                             label='Тренд', linewidth=2, color='green')
                     ax2.plot(monthly_data.index, decomposition.seasonal,
                             label='Сезонность', linewidth=1, alpha=0.7, color='orange')
-                    ax2.set_xlabel('Дата')
-                    ax2.set_ylabel('Компоненты')
-                    ax2.set_title('Декомпозиция временного ряда', fontsize=14)
+                    ax2.set_xlabel('Дата', fontsize=12, fontweight='bold')
+                    ax2.set_ylabel('Компоненты', fontsize=12, fontweight='bold')
+                    ax2.set_title('Декомпозиция временного ряда', fontsize=14, fontweight='bold')
                     ax2.legend()
                     ax2.grid(True, alpha=0.3)
                 except:
@@ -2978,8 +2983,8 @@ class MedicalAnalysisSystem:
                 residuals = monthly_data - rolling_mean
                 ax2.plot(monthly_data.index, residuals, color='gray', alpha=0.7)
                 ax2.axhline(y=0, color='red', linestyle='--')
-                ax2.set_title('Остатки (отклонения от скользящего среднего)')
-                ax2.set_ylabel('Остатки')
+                ax2.set_title('Остатки (отклонения от скользящего среднего)', fontsize=14, fontweight='bold')
+                ax2.set_ylabel('Остатки', fontsize=12, fontweight='bold')
             else:
                 fig.delaxes(ax2)
             
@@ -3319,9 +3324,15 @@ class MedicalAnalysisSystem:
             ax1.plot(forecast_dates, forecast_values, 
                 label='Прогноз (Linear Regression)', color='red', marker='s', linestyle='--', linewidth=2)
             
-            ax1.set_xlabel('Дата')
-            ax1.set_ylabel('Количество случаев')
-            ax1.set_title(f'Линейная регрессия: прогноз на {periods} месяцев\nMAE: {mae:.1f}, R²: {r2:.3f}', fontsize=14)
+            ax1.set_xlabel('Период', fontsize=12, fontweight='bold')
+            ax1.set_ylabel('Количество случаев', fontsize=12, fontweight='bold')
+            ax1.set_title(
+                f'Линейная регрессия: прогноз на {periods} месяцев\n'
+                f'Точность: R² = {r2:.3f} | Ошибка: MAE = {mae:.1f}',
+                fontsize=14,
+                fontweight='bold',
+                pad=20,
+            )
             ax1.legend()
             ax1.grid(True, alpha=0.3)
             
@@ -3329,9 +3340,9 @@ class MedicalAnalysisSystem:
             residuals = y - y_fitted
             ax2.scatter(range(len(residuals)), residuals, alpha=0.6, color='gray')
             ax2.axhline(y=0, color='red', linestyle='--', alpha=0.8)
-            ax2.set_xlabel('Индекс наблюдения')
-            ax2.set_ylabel('Остатки')
-            ax2.set_title('Анализ остатков модели', fontsize=14)
+            ax2.set_xlabel('Индекс наблюдения', fontsize=12, fontweight='bold')
+            ax2.set_ylabel('Остатки', fontsize=12, fontweight='bold')
+            ax2.set_title('Анализ остатков модели', fontsize=14, fontweight='bold')
             ax2.grid(True, alpha=0.3)
             
             # Добавляем линию тренда остатков
@@ -3679,99 +3690,6 @@ class MedicalAnalysisSystem:
             except Exception as e:
                 messagebox.showerror("Ошибка", f"Ошибка при сохранении: {str(e)}")
 
-    def forecast_linear_regression(self):
-            """Прогнозирование с использованием линейной регрессии"""
-            if not SKLEARN_AVAILABLE:
-                messagebox.showerror("Ошибка", "Библиотека scikit-learn не установлена!")
-                return
-                
-            try:
-                # Подготовка данных
-                data = self.current_data.copy()
-                region_filter_var = getattr(self, 'forecast_region_var', None)
-                region_filter = region_filter_var.get() if hasattr(region_filter_var, 'get') else region_filter_var
-                if region_filter and region_filter != 'Все' and 'Регион' in data.columns:
-                    data = data[data['Регион'] == region_filter]
-                disease_filter_var = getattr(self, 'forecast_disease_var', None)
-                disease_filter = disease_filter_var.get() if hasattr(disease_filter_var, 'get') else disease_filter_var
-                if disease_filter and disease_filter != 'Все' and 'Заболевание' in data.columns:
-                    data = data[data['Заболевание'] == disease_filter]
-                data['Дата'] = pd.to_datetime(data['Дата'])
-                monthly_data = data.groupby(pd.Grouper(key='Дата', freq='M'))['Количество'].sum()
-                monthly_data = monthly_data[monthly_data > 0]
-                
-                if len(monthly_data) < 6:
-                    messagebox.showwarning("Предупреждение", "Недостаточно данных для линейной регрессии")
-                    return
-                
-                # Подготовка признаков
-                X = np.arange(len(monthly_data)).reshape(-1, 1)
-                y = monthly_data.values
-                
-                # Полиномиальные признаки
-                poly_features = PolynomialFeatures(degree=2)
-                X_poly = poly_features.fit_transform(X)
-                
-                # Обучение модели
-                model = LinearRegression()
-                model.fit(X_poly, y)
-                
-                # Прогноз
-                periods = self.forecast_period.get()
-                X_future = np.arange(len(monthly_data), len(monthly_data) + periods).reshape(-1, 1)
-                X_future_poly = poly_features.transform(X_future)
-                forecast_values = model.predict(X_future_poly)
-                forecast_values = np.maximum(forecast_values, 0)
-                
-                # Даты прогноза
-                last_date = monthly_data.index[-1]
-                forecast_dates = pd.date_range(start=last_date + pd.DateOffset(months=1), 
-                                            periods=periods, freq='M')
-                
-                # График
-                fig, ax = plt.subplots(figsize=(12, 8))
-                
-                # Исторические данные
-                ax.plot(monthly_data.index, monthly_data.values, 
-                    label='Исторические данные', marker='o', linewidth=2, color='blue')
-                
-                # Аппроксимация на исторических данных
-                y_fitted = model.predict(X_poly)
-                ax.plot(monthly_data.index, y_fitted, 
-                    label='Линейная аппроксимация', color='green', linestyle=':', linewidth=2)
-                
-                # Прогноз
-                ax.plot(forecast_dates, forecast_values, 
-                    label='Прогноз (Linear Regression)', color='red', marker='s', linestyle='--', linewidth=2)
-                
-                ax.set_xlabel('Дата')
-                ax.set_ylabel('Количество случаев')
-                ax.set_title(f'Прогноз заболеваемости на {periods} месяцев (Linear Regression)', fontsize=14)
-                ax.legend()
-                ax.grid(True, alpha=0.3)
-                
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                
-                # Встраивание графика
-                canvas = FigureCanvasTkAgg(fig, master=self.forecast_plot_frame)
-                canvas.draw()
-                canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-                
-                # Сохранение результатов
-                r2 = model.score(X_poly, y)
-                self.forecast_results = {
-                    'dates': forecast_dates,
-                    'values': forecast_values,
-                    'model': 'Linear Regression',
-                    'r2': r2
-                }
-                
-                self.update_status(f"Прогноз Linear Regression построен на {periods} месяцев (R²={r2:.3f})")
-                
-            except Exception as e:
-                messagebox.showerror("Ошибка", f"Ошибка при построении прогноза Linear Regression: {str(e)}")
-                                        
     def create_report(self):
         """Создание отчета"""
         if self.current_data is None:

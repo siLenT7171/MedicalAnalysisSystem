@@ -2855,7 +2855,7 @@ class MedicalAnalysisSystem:
                     forecast_val = max(0, trend_value + seasonal_value)
                     forecast_values.append(forecast_val)
                 
-                method_name = "Упрощенная SARIMA (тренд + сезонность)"
+                # method_name = "Упрощенная SARIMA (тренд + сезонность)"
                 
             else:
                 # Используем настоящую ARIMA из statsmodels
@@ -2891,7 +2891,7 @@ class MedicalAnalysisSystem:
                     forecast_dates = pd.date_range(start=last_date + pd.DateOffset(months=1), 
                                                 periods=periods, freq='M')
                     
-                    method_name = f"ARIMA{best_params} (AIC: {best_aic:.1f})"
+                    # method_name = f"ARIMA{best_params} (AIC: {best_aic:.1f})"
                     
                 except Exception as e:
                     # Fallback к упрощенной модели
@@ -2945,14 +2945,14 @@ class MedicalAnalysisSystem:
             ax1.plot(monthly_data.index, monthly_data.values, 
                     label='Исторические данные', marker='o', linewidth=2, color='blue')
             ax1.plot(forecast_dates, forecast_values, 
-                    label=f'Прогноз ({method_name})', color='red', marker='s', linestyle='--', linewidth=2)
+                    label=f'Прогноз', color='red', marker='s', linestyle='--', linewidth=2)
             
             ax1.set_xlabel('Дата')
             ax1.set_ylabel('Количество случаев')
             metrics_text = ''
             if mae is not None and r2 is not None:
-                metrics_text = f"\nMAE: {mae:.1f}, R²: {r2:.3f}"
-            ax1.set_title(f'SARIMA прогноз на {periods} месяцев\n{method_name}{metrics_text}', fontsize=14)
+                metrics_text = f"MAE: {mae:.1f}, R²: {r2:.3f}"
+            ax1.set_title(f'SARIMA прогноз на {periods} месяцев\n{metrics_text}', fontsize=14)
             ax1.legend()
             ax1.grid(True, alpha=0.3)
             
@@ -2998,7 +2998,7 @@ class MedicalAnalysisSystem:
                 'dates': forecast_dates,
                 'values': forecast_values,
                 'model': 'SARIMA',
-                'method_details': method_name,
+                #'method_details': method_name,
                 'mae': mae,
                 'r2': r2
             }

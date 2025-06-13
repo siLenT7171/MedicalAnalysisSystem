@@ -1645,9 +1645,6 @@ class MedicalAnalysisSystem:
                 try:
                     date_to_parsed = pd.to_datetime(date_to)
                     if date_to_parsed > available_max:
-                        msg_parts.append(
-                            f"Конечные данные доступны только до {available_max.date()}"
-                        )
                         date_to_parsed = available_max
                     data = data[pd.to_datetime(data['Дата']) <= date_to_parsed]
                 except Exception:

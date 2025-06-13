@@ -56,7 +56,8 @@ except ImportError as e:
 
 # Настройка стиля для matplotlib
 plt.style.use('default')
-plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Sans-serif']
+plt.rcParams['font.family'] = ['DejaVu Sans']
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
 class MedicalAnalysisSystem:
@@ -2956,14 +2957,14 @@ class MedicalAnalysisSystem:
             ax1.legend()
             ax1.grid(True, alpha=0.3)
             
-            # График 2: Декомпозиция временного ряда
+            # График 2: Декомпозиция временного ряда или остатки
             if STATSMODELS_AVAILABLE and len(monthly_data) >= 24:
                 try:
                     decomposition = seasonal_decompose(monthly_data, model='additive', period=12)
-                    
-                    ax2.plot(monthly_data.index, decomposition.trend.dropna(), 
+
+                    ax2.plot(monthly_data.index, decomposition.trend.dropna(),
                             label='Тренд', linewidth=2, color='green')
-                    ax2.plot(monthly_data.index, decomposition.seasonal, 
+                    ax2.plot(monthly_data.index, decomposition.seasonal,
                             label='Сезонность', linewidth=1, alpha=0.7, color='orange')
                     ax2.set_xlabel('Дата')
                     ax2.set_ylabel('Компоненты')
@@ -2971,20 +2972,16 @@ class MedicalAnalysisSystem:
                     ax2.legend()
                     ax2.grid(True, alpha=0.3)
                 except:
-                    ax2.plot(monthly_data.index, monthly_data.values, color='blue')
-                    ax2.set_title('Исходный временной ряд')
+                    fig.delaxes(ax2)
+            elif len(monthly_data) >= 12:
+                rolling_mean = monthly_data.rolling(window=12).mean()
+                residuals = monthly_data - rolling_mean
+                ax2.plot(monthly_data.index, residuals, color='gray', alpha=0.7)
+                ax2.axhline(y=0, color='red', linestyle='--')
+                ax2.set_title('Остатки (отклонения от скользящего среднего)')
+                ax2.set_ylabel('Остатки')
             else:
-                # Показываем остатки простой модели
-                if len(monthly_data) >= 12:
-                    rolling_mean = monthly_data.rolling(window=12).mean()
-                    residuals = monthly_data - rolling_mean
-                    ax2.plot(monthly_data.index, residuals, color='gray', alpha=0.7)
-                    ax2.axhline(y=0, color='red', linestyle='--')
-                    ax2.set_title('Остатки (отклонения от скользящего среднего)')
-                    ax2.set_ylabel('Остатки')
-                else:
-                    ax2.plot(monthly_data.index, monthly_data.values, color='blue')
-                    ax2.set_title('Исходные данные')
+                fig.delaxes(ax2)
             
             plt.tight_layout()
             
@@ -3156,12 +3153,8 @@ class MedicalAnalysisSystem:
                     forecast_date = last_known_date + pd.DateOffset(months=i+1)
                     forecast_dates.append(forecast_date)
             
-            # Настройка matplotlib для кириллицы
-            plt.rcParams['font.family'] = ['DejaVu Sans', 'Arial Unicode MS', 'Tahoma', 'sans-serif']
-            plt.rcParams['axes.unicode_minus'] = False
-            
             # Создание улучшенной визуализации
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 7))
+            fig, ax1 = plt.subplots(figsize=(12, 7))
             
             # График 1: Прогноз (более чистый дизайн)
             try:
@@ -3212,64 +3205,6 @@ class MedicalAnalysisSystem:
             ax1.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
             ax1.set_facecolor('#FAFAFA')
             
-            # График 2: Упрощённый анализ качества модели
-            if len(X_test) > 0 and len(y_test) > 0:
-                # Точность модели - более простой и понятный график
-                ax2.scatter(y_test, y_pred, alpha=0.8, color='#3498DB', s=80, edgecolors='white', linewidth=1.5)
-                
-                # Идеальная линия
-                min_val = min(min(y_test), min(y_pred)) * 0.95
-                max_val = max(max(y_test), max(y_pred)) * 1.05
-                ax2.plot([min_val, max_val], [min_val, max_val], 'r-', linewidth=3, alpha=0.8, label='Идеальный прогноз')
-                
-                # Добавляем статистику в правый верхний угол
-                stats_text = f'Качество модели:\n' \
-                            f'R² = {r2:.3f}\n' \
-                            f'MAE = {mae:.1f}\n' \
-                            f'Тестовых точек: {len(y_test)}'
-                
-                ax2.text(0.98, 0.02, stats_text, transform=ax2.transAxes, fontsize=11,
-                        verticalalignment='bottom', horizontalalignment='right',
-                        bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.9, edgecolor='gray'))
-                
-                ax2.set_xlabel('Фактические значения', fontsize=12, fontweight='bold')
-                ax2.set_ylabel('Предсказанные значения', fontsize=12, fontweight='bold')
-                ax2.set_title('Точность прогноза: Факт vs Прогноз', fontsize=14, fontweight='bold', pad=15)
-                ax2.legend(loc='upper left', frameon=True, fancybox=True, shadow=True)
-                ax2.grid(True, alpha=0.3)
-                ax2.set_facecolor('#FAFAFA')
-                
-            else:
-                # Если мало тестовых данных, показываем важность признаков (улучшенную)
-                feature_importance = xgb_model.feature_importances_
-                feature_names = ['Период', 'Месяц', 'Тренд', 'Лаг-1', 'Лаг-2', 'Лаг-3', 
-                                'СМА-3', 'СМА-6', 'Сезон-sin', 'Сезон-cos']
-                
-                # Берём только топ-6 признаков для читаемости
-                importance_data = list(zip(feature_names, feature_importance))
-                importance_data.sort(key=lambda x: x[1], reverse=True)
-                top_features = importance_data[:6]
-                
-                names, importances = zip(*top_features)
-                
-                # Цветовая схема
-                colors = ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C']
-                
-                bars = ax2.barh(names, importances, color=colors, alpha=0.8, edgecolor='white', linewidth=1)
-                
-                # Добавляем проценты на столбцы
-                for i, (bar, importance) in enumerate(zip(bars, importances)):
-                    percentage = importance * 100
-                    ax2.text(bar.get_width() + max(importances)*0.01, bar.get_y() + bar.get_height()/2, 
-                            f'{percentage:.1f}%', ha='left', va='center', fontsize=10, fontweight='bold')
-                
-                ax2.set_xlabel('Важность признака', fontsize=12, fontweight='bold')
-                ax2.set_title('Топ-6 важных признаков модели', fontsize=14, fontweight='bold', pad=15)
-                ax2.grid(True, axis='x', alpha=0.3)
-                ax2.set_facecolor('#FAFAFA')
-                ax2.set_xlim(0, max(importances) * 1.15)
-            
-            # Общее улучшение дизайна
             plt.tight_layout(pad=3.0)
             
             # Встраивание графика
@@ -3578,9 +3513,6 @@ class MedicalAnalysisSystem:
                     forecast_dates.append(forecast_date)
             
             # Настройка matplotlib для корректного отображения
-            plt.rcParams['font.family'] = ['DejaVu Sans', 'Arial Unicode MS', 'Tahoma', 'sans-serif']
-            plt.rcParams['axes.unicode_minus'] = False
-            
             # Создание графика
             fig, ax1 = plt.subplots(figsize=(12, 7))
             

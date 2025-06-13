@@ -428,12 +428,18 @@ class MedicalAnalysisSystem:
         table_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Создание Treeview
-        columns = ('ID', 'Дата', 'Регион', 'Заболевание', 'Возраст', 'Пол', 'Количество')
+        columns = ('ID', 'Дата', 'Регион', 'Заболевание', 'Возраст', 'Пол')
         self.data_tree = ttk.Treeview(table_frame, columns=columns, show='headings', height=15)
-        
+
         # Определение заголовков и ширины колонок
-        column_widths = {'ID': 50, 'Дата': 100, 'Регион': 120, 'Заболевание': 120, 
-                        'Возраст': 80, 'Пол': 50, 'Количество': 100}
+        column_widths = {
+            'ID': 50,
+            'Дата': 100,
+            'Регион': 120,
+            'Заболевание': 120,
+            'Возраст': 80,
+            'Пол': 50
+        }
         
         for col in columns:
             self.data_tree.heading(col, text=col, command=lambda c=col: self.sort_treeview(c))
@@ -1333,7 +1339,7 @@ class MedicalAnalysisSystem:
             for idx, row in display_data.iterrows():
                 # Преобразуем все значения в строки для безопасного отображения
                 values = []
-                for col in ['ID', 'Дата', 'Регион', 'Заболевание', 'Возраст', 'Пол', 'Количество']:
+                for col in ['ID', 'Дата', 'Регион', 'Заболевание', 'Возраст', 'Пол']:
                     if col in row.index:
                         value = row[col]
                         if pd.isna(value):
@@ -1364,7 +1370,7 @@ class MedicalAnalysisSystem:
                 
                 for idx, row in display_data.iterrows():
                     values = []
-                    for col in ['ID', 'Дата', 'Регион', 'Заболевание', 'Возраст', 'Пол', 'Количество']:
+                    for col in ['ID', 'Дата', 'Регион', 'Заболевание', 'Возраст', 'Пол']:
                         if col in row.index:
                             value = row[col]
                             if pd.isna(value):

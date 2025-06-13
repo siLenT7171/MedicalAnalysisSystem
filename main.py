@@ -632,7 +632,7 @@ class MedicalAnalysisSystem:
         self.metric_combo = ttk.Combobox(map_control_panel, textvariable=self.map_metric, width=20, state="readonly")
         
         # Устанавливаем значения по умолчанию
-        default_metrics = ['Всего случаев', 'На 100К населения', 'Темп роста', 'Средняя тяжесть']
+        default_metrics = ['Всего случаев', 'Темп роста']
         self.metric_combo['values'] = default_metrics
         self.metric_combo.set('Всего случаев')  # Устанавливаем значение по умолчанию
         self.metric_combo.grid(row=1, column=1, padx=5, pady=5, sticky='w')
@@ -693,7 +693,7 @@ class MedicalAnalysisSystem:
             current_disease = self.map_disease.get()
             
             # Обновляем список показателей
-            metrics = ['Всего случаев', 'На 100К населения', 'Темп роста', 'Средняя тяжесть']
+            metrics = ['Всего случаев', 'Темп роста']
             self.metric_combo['values'] = metrics
             if current_metric in metrics:
                 self.map_metric.set(current_metric)
@@ -738,7 +738,7 @@ class MedicalAnalysisSystem:
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при обновлении фильтров карты: {str(e)}")
             # В случае ошибки устанавливаем значения по умолчанию
-            self.metric_combo['values'] = ['Всего случаев', 'На 100К населения', 'Темп роста', 'Средняя тяжесть']
+            self.metric_combo['values'] = ['Всего случаев', 'Темп роста']
             self.metric_combo.set('Всего случаев')
             self.period_combo['values'] = ['2024', '2023', '2022', '2021', '2020', 'Все годы']
             self.period_combo.set('2024')
@@ -1727,19 +1727,6 @@ class MedicalAnalysisSystem:
                 regional_data = data.groupby('Регион')['Количество'].sum().sort_values(ascending=False)
                 title_suffix = "Общее количество случаев"
                 color_label = "Количество случаев"
-            elif metric == 'На 100К населения':
-                # Примерные данные населения по регионам (в тысячах)
-                population_data = {
-                    'Алматы': 2000, 'Астана': 1200, 'Караганда': 700, 'Шымкент': 1000,
-                    'Актобе': 500, 'Павлодар': 350, 'Жамбыл': 400, 'ВКО': 350,
-                    'Костанай': 250, 'Атырау': 300, 'Петропавловск': 200, 'Актау': 200,
-                    'Кокшетау': 150, 'Семей': 350, 'Талдыкорган': 200
-                }
-                regional_totals = data.groupby('Регион')['Количество'].sum()
-                regional_data = pd.Series({region: (count / population_data.get(region, 500)) * 100 
-                                         for region, count in regional_totals.items()}).sort_values(ascending=False)
-                title_suffix = "На 100К населения"
-                color_label = "Случаев на 100К"
             elif metric == 'Темп роста':
                 # Расчет темпа роста за последние 2 года
                 data['Год'] = pd.to_datetime(data['Дата']).dt.year
@@ -1756,9 +1743,9 @@ class MedicalAnalysisSystem:
                     title_suffix = "Данных недостаточно для темпа роста"
                     color_label = "Количество случаев"
             else:
-                regional_data = data.groupby('Регион')['Количество'].mean().sort_values(ascending=False)
-                title_suffix = "Средняя тяжесть"
-                color_label = "Среднее значение"
+                regional_data = data.groupby('Регион')['Количество'].sum().sort_values(ascending=False)
+                title_suffix = "Общее количество случаев"
+                color_label = "Количество случаев"
             
             # Создание графика
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
@@ -2103,8 +2090,8 @@ class MedicalAnalysisSystem:
                 values = data.groupby('Регион')['Количество'].sum()
                 color_label = 'Количество случаев'
             else:
-                values = data.groupby('Регион')['Количество'].mean()
-                color_label = metric
+                values = data.groupby('Регион')['Количество'].sum()
+                color_label = 'Количество случаев'
 
             coords = getattr(self, 'region_coords', {})
 
